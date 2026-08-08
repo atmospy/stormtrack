@@ -2,7 +2,6 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "imdtrack: A Python library for the IMD North Indian Ocean cyclone best-track record"
 type: software
-date-released: "2026-07-12"
 authors:
   - family-names: Syed
     given-names: Hamid Ali
@@ -20,5 +19,16 @@ keywords:
   - pandas
 # Zenodo Concept DOI (represents ALL versions and always resolves to the latest,
 # so it never changes between releases — this is the one to cite).
-# Fill this in after your first GitHub release has been archived by Zenodo.
 doi: 10.5281/zenodo.21301659
+# Preferred citation: a release-agnostic reference (year only, no per-release
+# date or version) so citations stay uniform across releases.
+preferred-citation:
+  type: software
+  title: "imdtrack: A Python library for the IMD North Indian Ocean cyclone best-track record"
+  authors:
+    - family-names: Syed
+      given-names: Hamid Ali
+      orcid: "https://orcid.org/0000-0002-7188-2544"
+  year: 2026
+  doi: 10.5281/zenodo.21301659
+  url: "https://imdtrack.readthedocs.io/"
