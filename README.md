@@ -19,6 +19,15 @@ turns it into clean, analysis-ready tables. The parsed dataset is committed to
 this repo (under [`data/`](data/)) and refreshed by a monthly GitHub Action, so
 `imd.load()` just downloads the pre-parsed data — no Excel parsing on your side.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/syedhamidali/imdtrack/main/docs/_static/all_tracks_grade.png"
+       alt="Every North Indian Ocean cyclone track, 1982–present, coloured by peak IMD grade"
+       width="100%">
+</p>
+
+<p align="center"><em>Every storm in the record — 428 systems since 1982 — coloured by peak IMD
+intensity grade. Two lines of code (below).</em></p>
+
 ## Install
 
 **pip** (from [PyPI](https://pypi.org/project/imdtrack/)):
@@ -117,6 +126,36 @@ ds.where(ds.basin == "ARB", drop=True)      # Arabian Sea storms only
 
 See the [documentation](https://imdtrack.readthedocs.io/) for a full walkthrough
 and a North Indian Ocean climatology example.
+
+## Plotting
+
+The optional `[plot]` extra draws publication-quality [Cartopy](https://scitools.org.uk/cartopy/)
+maps, coloured by IMD intensity grade. Plot **every track at once** — by peak
+grade (the figure above) or by sub-basin:
+
+```python
+import imdtrack as imd
+
+bt = imd.load().clean()                        # QC-clean the whole record
+imd.plot_tracks(bt.observations, color="grade")   # colour by peak intensity
+imd.plot_tracks(bt.observations, color="basin")   # Bay of Bengal vs Arabian Sea
+```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/syedhamidali/imdtrack/main/docs/_static/all_tracks_basin.png"
+       alt="All tracks coloured by sub-basin: Bay of Bengal vs Arabian Sea" width="100%">
+</p>
+
+Or a **single storm**, coloured by grade with genesis / peak / end marked:
+
+```python
+imd.plot_track(bt.storm("tauktae"), color="grade")   # or any storm_id / name
+```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/syedhamidali/imdtrack/main/docs/_static/track_tauktae.png"
+       alt="Cyclone Tauktae (2021) track coloured by IMD grade" width="46%">
+</p>
 
 ## Staying up to date
 
