@@ -27,7 +27,7 @@ If you use `imdtrack` in your work, please cite it via its Zenodo **Concept
 DOI** — this DOI represents all versions and always resolves to the latest, so
 it stays stable across releases:
 
-> Syed, H. A. *imdtrack: A Python library for the IMD North Indian Ocean
+> Syed, H. A. (2026). *imdtrack: A Python library for the IMD North Indian Ocean
 > cyclone best-track record.* <https://doi.org/10.5281/zenodo.21301659>
 
 The repository's [`CITATION.cff`](https://github.com/syedhamidali/imdtrack/blob/main/CITATION.cff)

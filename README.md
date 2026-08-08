@@ -159,7 +159,7 @@ corruption that is left as-is (visible as an implausibly long `start_time`–`en
 Please cite `imdtrack` via its Zenodo **Concept DOI** — stable across releases,
 always resolving to the latest version:
 
-> Syed, H. A. *imdtrack: A Python library for the IMD North Indian Ocean
+> Syed, H. A. (2026). *imdtrack: A Python library for the IMD North Indian Ocean
 > cyclone best-track record.* https://doi.org/10.5281/zenodo.21301659
 
 GitHub's "Cite this repository" button reads [`CITATION.cff`](CITATION.cff).
