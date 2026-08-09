@@ -51,10 +51,13 @@ def validate_completeness(frames: dict, positional_by_year: dict) -> None:
     parsed_by_year = obs.groupby("year").size().to_dict() if not obs.empty else {}
 
     shortfalls = []
+    surpluses = []
     for year, expected in positional_by_year.items():
         got = int(parsed_by_year.get(year, 0))
         if got < expected:
             shortfalls.append((year, expected, got))
+        elif got > expected:
+            surpluses.append((year, expected, got))
 
     if shortfalls:
         detail = ", ".join(f"{y}: {g}/{e}" for y, e, g in sorted(shortfalls))
@@ -63,6 +66,18 @@ def validate_completeness(frames: dict, positional_by_year: dict) -> None:
             f"parser dropped {missing} fix(es) present in the workbook "
             f"(parsed/expected by year — {detail}); refusing to publish a "
             "partial dataset"
+        )
+
+    # The counter applies the same row test as the parser, so the two agree
+    # exactly. A surplus means fixes are being emitted twice — e.g. a storm
+    # boundary rule that replays rows — which is as wrong as dropping them.
+    if surpluses:
+        detail = ", ".join(f"{y}: {g}/{e}" for y, e, g in sorted(surpluses))
+        extra = sum(g - e for _, e, g in surpluses)
+        raise ValidationError(
+            f"parser emitted {extra} more fix(es) than the workbook contains "
+            f"(parsed/expected by year — {detail}); refusing to publish a "
+            "duplicated dataset"
         )
 
 

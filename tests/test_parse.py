@@ -390,3 +390,159 @@ def test_grade_is_ordered_category(tmp_path):
     assert grade.cat.ordered
     assert grade.max() == "SuCS"
     assert res["storms"]["peak_grade"].iloc[0] == "SuCS"
+
+
+def _fix(serial, basin, name, date, time, lat, lon, grade="D", wind="25"):
+    return [serial, basin, name, date, time, lat, lon, 1.5, "1000", wind, "3", grade, "", ""]
+
+
+def test_blank_row_inside_a_storm_does_not_split_it(tmp_path):
+    """A stray blank row occurs *within* a storm's block (2001, BOB serial 2).
+    Blank rows usually separate storms, but one must not start a new storm when
+    the (serial, basin) key is unchanged — that reported one system as two."""
+    d1, d2 = datetime(2001, 6, 12), datetime(2001, 6, 13)
+    rows = [
+        HEADER_14,
+        _fix(2, "BOB", None, d1, "0300", 19.5, 87.0),
+        [],  # stray blank *inside* the block
+        _fix(2, "BOB", None, d1, "1200", 20.0, 86.5),
+        _fix(2, "BOB", None, d2, "0300", 21.0, 85.5),
+    ]
+    res = parse_workbook(_write(tmp_path, {"2001": rows}))
+    assert res["storms"]["storm_id"].tolist() == ["2001-001"]
+    assert len(res["observations"]) == 3
+
+
+def test_single_row_serial_typo_does_not_split_a_storm(tmp_path):
+    """One row of FANOOS (2005) carries serial 10 in an otherwise serial-11
+    block. A serial that covers a single mid-block row and then reverts is a
+    keying error, not a storm boundary — it once produced three storms."""
+    d = datetime(2005, 12, 10)
+    rows = [
+        HEADER_14,
+        _fix(11, "BOB", "FANOOS", d, "0000", 10.5, 80.5, "CS", "45"),
+        _fix(10, "BOB", "FANOOS", d, "0300", 10.4, 79.8, "DD", "30"),  # typo
+        _fix(11, "BOB", "FANOOS", d, "0600", 10.5, 79.5),
+        _fix(11, "BOB", "FANOOS", d, "0900", 10.5, 79.5),
+    ]
+    res = parse_workbook(_write(tmp_path, {"2005": rows}))
+    storms = res["storms"]
+    assert storms["storm_id"].tolist() == ["2005-001"]
+    assert storms["serial"].iloc[0] == 11
+    assert len(res["observations"]) == 4
+
+
+def test_day_month_transposed_dates_are_resolved(tmp_path):
+    """Nargis (2008): 1-3 May were stored month-first as 5 Jan/Feb/Mar, so the
+    storm appeared to span four months. ``time`` keeps the workbook value and
+    ``time_resolved`` carries the corrected one."""
+    rows = [HEADER_14]
+    for hh in ("0000", "0600", "1200", "1800"):
+        rows.append(_fix(1, "BOB", "NARGIS", datetime(2008, 4, 30), hh, 16.0, 92.0))
+    for month in (1, 2, 3):  # 1, 2, 3 May written the wrong way round
+        for hh in ("0000", "0600"):
+            rows.append(_fix(1, "BOB", "NARGIS", datetime(2008, month, 5), hh, 16.0, 94.0))
+
+    obs = parse_workbook(_write(tmp_path, {"2008": rows}))["observations"]
+    assert len(obs) == 10
+    assert obs["date_suspect"].sum() == 6
+    resolved = obs.sort_values("time_resolved")["time_resolved"]
+    assert resolved.min() == datetime(2008, 4, 30)
+    assert resolved.max() == datetime(2008, 5, 3, 6)
+    # the track is a continuous six-day event once resolved
+    assert (resolved.max() - resolved.min()).days == 3
+
+
+def test_mis_keyed_year_is_resolved_from_the_sheet(tmp_path):
+    """1988-002 carries a 1989 date on one row of a June 1988 storm."""
+    rows = [
+        HEADER_14,
+        _fix(2, "BOB", None, datetime(1988, 6, 9), "0300", 19.0, 89.0),
+        _fix(2, "BOB", None, datetime(1988, 6, 10), "0300", 19.5, 88.5),
+        _fix(2, "BOB", None, datetime(1989, 6, 12), "0300", 20.0, 88.0),  # 1989 typo
+    ]
+    obs = parse_workbook(_write(tmp_path, {"1988": rows}))["observations"]
+    assert obs["date_suspect"].sum() == 1
+    assert obs["time_resolved"].max() == datetime(1988, 6, 12, 3)
+
+
+def test_storm_crossing_new_year_is_left_alone(tmp_path):
+    """A December storm running into January legitimately carries the next
+    year, and must not be 'corrected' back into its own sheet year."""
+    rows = [
+        HEADER_14,
+        _fix(7, "BOB", None, datetime(2017, 12, 30), "0600", 8.0, 92.0),
+        _fix(7, "BOB", None, datetime(2017, 12, 31), "0600", 8.5, 91.0),
+        _fix(7, "BOB", None, datetime(2018, 1, 1), "0600", 9.0, 90.0),
+    ]
+    obs = parse_workbook(_write(tmp_path, {"2017": rows}))["observations"]
+    assert not obs["date_suspect"].any()
+    assert obs["time_resolved"].tolist() == obs["time"].tolist()
+
+
+def test_fix_with_one_missing_coordinate_is_kept(tmp_path):
+    """Some rows carry a real time, pressure, wind and grade but only one
+    coordinate — the cell is blank or reads "Over land" once the system is
+    inland (1982 #10, 2008 RASHMI, 2017 #7). Those are observations with an
+    incomplete position, not remarks, and must not be discarded."""
+    d = datetime(2017, 10, 20)
+    rows = [
+        HEADER_14,
+        _fix(7, "BOB", None, d, "0000", 20.8, 86.0),
+        [7, "BOB", None, d, "0300", 21.0, None, "-", 998, 25, 4, "D", "", ""],
+        [7, "BOB", None, d, "0600", 21.5, "Over land", "-", 998, 25, 4, "D", "", ""],
+        [7, "BOB", None, d, "0900", None, 85.0, "-", 998, 25, 4, "D", "", ""],
+    ]
+    obs = parse_workbook(_write(tmp_path, {"2017": rows}))["observations"]
+    assert len(obs) == 4
+    assert obs["lon"].isna().sum() == 2
+    assert obs["lat"].isna().sum() == 1
+    assert obs["wind"].notna().all()  # the intensity data is what makes them fixes
+
+
+def test_row_without_intensity_or_position_is_not_a_fix(tmp_path):
+    """The relaxed position rule must not turn remark rows into observations."""
+    d = datetime(2020, 5, 20)
+    remark = "Crossed West Bengal coast near Sagar Island around 1000 UTC."
+    rows = [
+        HEADER_14,
+        _fix(1, "BOB", "AMPHAN", d, "0900", 21.4, 88.1),
+        [1, "BOB", "AMPHAN", d, "1200", remark, None, None, None, None, None, None, "", ""],
+        [1, "BOB", "AMPHAN", d, "1500", 21.9, None, None, None, None, None, None, "", ""],
+    ]
+    res = parse_workbook(_write(tmp_path, {"2020": rows}))
+    assert len(res["observations"]) == 1  # neither trailing row is a fix
+    assert len(res["remarks"]) == 1
+
+
+def test_counter_matches_the_parser_exactly(tmp_path):
+    """``count_positional_rows`` is the completeness guard: it must count the
+    same rows the parser emits, so a shortfall or surplus is a real bug."""
+    from imdtrack.parse import count_positional_rows
+
+    d = datetime(2013, 11, 11)
+    rows = [
+        HEADER_14,
+        _fix(1, "BOB", "LEHAR", d, "0000", "8.5/96.5", "8.5/96.5"),  # packed pair
+        [1, "BOB", "LEHAR", d, "0300", 8.6, None, "-", 998, 25, 4, "D", "", ""],
+        [
+            1,
+            "BOB",
+            "LEHAR",
+            d,
+            "0600",
+            "not a position",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "",
+            "",
+        ],
+        _fix(1, "BOB", "LEHAR", d, "0900", 8.8, 96.0),
+    ]
+    path = _write(tmp_path, {"2013": rows})
+    obs = parse_workbook(path)["observations"]
+    assert sum(count_positional_rows(path).values()) == len(obs) == 3

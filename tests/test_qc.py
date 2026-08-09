@@ -129,3 +129,37 @@ def test_clean_fix_dates_reorders_chronologically():
     assert fixed["time"].iloc[-1] == pd.Timestamp("2008-05-03")
     span_days = (fixed["time"].max() - fixed["time"].min()).days
     assert span_days == 8  # Apr 25 → May 3, not ~120
+
+
+def test_resolve_dates_prefers_the_stored_reading_on_a_clean_track():
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    dates = [datetime(2020, 5, 16)] * 3 + [datetime(2020, 5, 17)] * 2
+    assert resolve_dates(dates, 2020) == dates
+
+
+def test_resolve_dates_fixes_a_transposed_block():
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    # 30 Apr, then 1-2 May written month-first as 5 Jan / 5 Feb
+    dates = [datetime(2008, 4, 30), datetime(2008, 1, 5), datetime(2008, 2, 5)]
+    assert resolve_dates(dates, 2008) == [
+        datetime(2008, 4, 30),
+        datetime(2008, 5, 1),
+        datetime(2008, 5, 2),
+    ]
+
+
+def test_resolve_dates_gives_up_rather_than_guessing():
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    # a date that recurs after another has intervened is not a simple keying
+    # error, so the sequence is returned untouched
+    dates = [datetime(2010, 6, 1), datetime(2010, 6, 2), datetime(2010, 6, 1)]
+    assert resolve_dates(dates, 2010) == dates

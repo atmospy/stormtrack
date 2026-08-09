@@ -75,10 +75,14 @@ class BestTracks:
         changed = False
 
         if fix_dates and "date_suspect" in obs.columns and obs["date_suspect"].any():
-            from .qc import flag_dates
+            if "time_resolved" in obs.columns:
+                # Resolved at parse time, where the workbook row order is known.
+                obs["time"] = obs["time_resolved"]
+            else:  # datasets published before time_resolved existed
+                from .qc import flag_dates
 
-            suspect, corrected = flag_dates(obs)
-            obs.loc[suspect, "time"] = corrected[suspect]
+                suspect, corrected = flag_dates(obs)
+                obs.loc[suspect, "time"] = corrected[suspect]
             obs = obs.sort_values(["storm_id", "time"], kind="stable").reset_index(drop=True)
             obs["step"] = obs.groupby("storm_id", sort=False).cumcount()
             changed = True
