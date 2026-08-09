@@ -188,3 +188,25 @@ def test_build_refuses_to_clobber_on_bad_parse(tmp_path, monkeypatch):
     assert after.source_sha256 == "sha-good"
     assert after.n_storms == 3
     assert store.read_dataset(data_dir)["storms"].shape[0] == 3
+
+
+def test_validate_completeness_rejects_a_surplus():
+    """The counter mirrors the parser's row test, so emitting *more* fixes than
+    the workbook holds means rows are being duplicated — as bad as dropping."""
+    import pandas as pd
+    import pytest
+
+    from imdtrack import validate
+
+    frames = {"observations": pd.DataFrame({"year": [2020] * 5})}
+    with pytest.raises(validate.ValidationError, match="more fix"):
+        validate.validate_completeness(frames, {2020: 3})
+
+
+def test_validate_completeness_accepts_an_exact_match():
+    import pandas as pd
+
+    from imdtrack import validate
+
+    frames = {"observations": pd.DataFrame({"year": [2020] * 3})}
+    validate.validate_completeness(frames, {2020: 3})  # must not raise

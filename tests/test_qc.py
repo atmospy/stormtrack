@@ -129,3 +129,160 @@ def test_clean_fix_dates_reorders_chronologically():
     assert fixed["time"].iloc[-1] == pd.Timestamp("2008-05-03")
     span_days = (fixed["time"].max() - fixed["time"].min()).days
     assert span_days == 8  # Apr 25 → May 3, not ~120
+
+
+def test_resolve_dates_prefers_the_stored_reading_on_a_clean_track():
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    dates = [datetime(2020, 5, 16)] * 3 + [datetime(2020, 5, 17)] * 2
+    assert resolve_dates(dates, 2020) == dates
+
+
+def test_resolve_dates_fixes_a_transposed_block():
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    # 30 Apr, then 1-2 May written month-first as 5 Jan / 5 Feb
+    dates = [datetime(2008, 4, 30), datetime(2008, 1, 5), datetime(2008, 2, 5)]
+    assert resolve_dates(dates, 2008) == [
+        datetime(2008, 4, 30),
+        datetime(2008, 5, 1),
+        datetime(2008, 5, 2),
+    ]
+
+
+def test_resolve_dates_gives_up_rather_than_guessing():
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    # a date that recurs after another has intervened is not a simple keying
+    # error, so the sequence is returned untouched
+    dates = [datetime(2010, 6, 1), datetime(2010, 6, 2), datetime(2010, 6, 1)]
+    assert resolve_dates(dates, 2010) == dates
+
+
+def test_resolve_dates_handles_an_empty_track():
+    from imdtrack.qc import resolve_dates
+
+    assert resolve_dates([], 2020) == []
+
+
+def test_resolve_dates_leaves_a_long_gap_alone():
+    """Blocks more than MAX_BLOCK_GAP_DAYS apart admit no consistent reading,
+    so the sequence is returned untouched rather than forced."""
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    dates = [datetime(2011, 6, 1), datetime(2011, 7, 20)]
+    assert resolve_dates(dates, 2011) == dates
+
+
+def test_resolve_dates_ignores_an_impossible_year_snap():
+    """29 February cannot be snapped into a non-leap sheet year; the candidate
+    is skipped rather than raising."""
+    from datetime import datetime
+
+    from imdtrack.qc import resolve_dates
+
+    dates = [datetime(2020, 2, 29), datetime(2020, 3, 1)]
+    assert resolve_dates(dates, 2019) == dates
+
+
+def test_flag_positions_without_the_required_columns():
+    import pandas as pd
+
+    from imdtrack.qc import flag_positions
+
+    out = flag_positions(pd.DataFrame({"storm_id": ["a"], "time": [pd.Timestamp("2020-01-01")]}))
+    assert not out.any()
+
+
+def test_clean_fix_dates_falls_back_for_legacy_datasets():
+    """Datasets published before ``time_resolved`` existed must still be
+    correctable through the older median-based heuristic."""
+    import pandas as pd
+
+    from imdtrack.core import BestTracks
+    from imdtrack.parse import _summarize_storms
+
+    times = [pd.Timestamp("2008-04-30 00:00")] * 3 + [pd.Timestamp("2008-01-05 00:00")]
+    obs = pd.DataFrame(
+        {
+            "storm_id": ["2008-001"] * 4,
+            "year": [2008] * 4,
+            "serial": [1] * 4,
+            "basin": ["BOB"] * 4,
+            "name": ["NARGIS"] * 4,
+            "time": times,
+            "pressure": [962.0] * 4,
+            "lat": [16.0, 16.1, 16.2, 16.3],
+            "lon": [92.0, 92.5, 93.0, 93.5],
+            "wind": [65.0] * 4,
+            "grade": ["VSCS"] * 4,
+            "date_suspect": [False, False, False, True],
+            "pos_suspect": [False] * 4,
+            "step": [0, 1, 2, 3],
+        }
+    )
+    bt = BestTracks(obs, pd.DataFrame(), _summarize_storms(obs), "0" * 64)
+    out = bt.clean(fix_dates=True).observations
+    assert "time_resolved" not in out.columns
+    assert out["time"].max() == pd.Timestamp("2008-05-01 00:00")
+
+
+def test_clean_fix_dates_uses_the_resolved_column(tmp_path):
+    """The normal path: the parser resolved the calendar, so ``clean`` simply
+    adopts ``time_resolved`` and re-orders the track."""
+    from datetime import datetime
+
+    import openpyxl
+
+    from imdtrack.core import BestTracks
+    from imdtrack.parse import parse_workbook
+
+    header = [
+        "Serial Number of system during year",
+        "Basin of origin",
+        "Name",
+        "Date(DD-MM-YYYY)",
+        "Time (UTC)",
+        "Latitude (lat.)",
+        "Longitude (lon.)",
+        'CI No [or "T. No"]',
+        "Estimated Central Pressure (hPa)",
+        "Maximum Sustained Surface Wind (kt) ",
+        "Pressure Drop (hPa)",
+        "Grade (text)",
+        "Outermost closed isobar (hPa)",
+        "Diameter/Size of outermost closed isobar",
+    ]
+
+    def fix(date, time, lat, lon):
+        return [1, "BOB", "NARGIS", date, time, lat, lon, 1.5, "990", "65", "20", "VSCS", "", ""]
+
+    rows = [header]
+    for hh in ("0000", "0600"):
+        rows.append(fix(datetime(2008, 4, 30), hh, 16.0, 92.0))
+    for month in (1, 2):  # 1 and 2 May, written the wrong way round
+        rows.append(fix(datetime(2008, month, 5), "0000", 16.0, 94.0))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "2008"
+    for r in rows:
+        ws.append(r)
+    path = tmp_path / "wb.xlsx"
+    wb.save(path)
+
+    frames = parse_workbook(path)
+    bt = BestTracks(frames["observations"], frames["remarks"], frames["storms"], "0" * 64)
+    assert bt.observations["date_suspect"].sum() == 2
+
+    out = bt.clean(fix_dates=True).observations
+    assert out["time"].tolist() == sorted(out["time"].tolist())
+    assert out["time"].max() == pd.Timestamp("2008-05-02 00:00")

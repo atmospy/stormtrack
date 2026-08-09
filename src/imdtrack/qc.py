@@ -62,6 +62,92 @@ def flag_positions(observations: pd.DataFrame, max_kmh: float = MAX_TRANSLATION_
 # of its storm is almost certainly a data-entry error rather than real duration.
 MAX_STORM_SPREAD_DAYS = 15
 
+# Consecutive dated blocks within one storm advance by a day at a time. A little
+# slack absorbs genuine gaps in the record without admitting a transposed date.
+MAX_BLOCK_GAP_DAYS = 3
+
+
+def _date_candidates(d, year: int):
+    """Readings of a Date cell, most-trusted first.
+
+    The workbook's dates carry two recurring keying errors, both of which leave
+    the *position* data untouched and so are invisible on a map:
+
+    * day and month transposed — a cell typed day-first as ``1/5/2008``
+      (1 May) but stored by the spreadsheet month-first as 5 January;
+    * a mis-keyed year (1989 on a row in the 1988 sheet).
+
+    Both are offered here as alternatives to the stored value;
+    :func:`resolve_dates` decides between them from the storm's own sequence.
+    """
+    import datetime as _dt
+
+    out = [d]
+
+    def _add(x):
+        if x is not None and x not in out:
+            out.append(x)
+
+    def _swap(x):
+        try:
+            return _dt.datetime(x.year, x.day, x.month)
+        except (ValueError, AttributeError):
+            return None
+
+    _add(_swap(d))
+    if d.year != year:
+        try:
+            snapped = d.replace(year=year)
+        except ValueError:
+            snapped = None
+        _add(snapped)
+        if snapped is not None:
+            _add(_swap(snapped))
+    return out
+
+
+def resolve_dates(dates, year: int):
+    """Resolve one storm's Date column, given its fixes **in workbook order**.
+
+    Each dated block is read either as written or as one of the corrections in
+    :func:`_date_candidates`; the reading chosen for the storm as a whole is the
+    one that advances by whole days and spans the least total time, preferring
+    the stored value on ties. Using the storm's internal sequence rather than an
+    external archive means storms absent from other archives are repaired too.
+
+    Returns a list of dates aligned with ``dates``; unchanged where the stored
+    reading already makes sense, and equal to the input if no reading does.
+    """
+    if not dates:
+        return []
+
+    blocks: list = []
+    for d in dates:
+        if not blocks or d != blocks[-1]:
+            blocks.append(d)
+    # A date that recurs after another date has intervened is not a simple
+    # keying error; leave such a storm alone rather than guess.
+    if len(set(blocks)) != len(blocks):
+        return list(dates)
+
+    # Depth-first over the (at most four) readings of each block, keeping only
+    # sequences that advance by 1..MAX_BLOCK_GAP_DAYS.
+    cands = [_date_candidates(b, year) for b in blocks]
+    frontier = [(c, (c,), 0 if k == 0 else 1) for k, c in enumerate(cands[0])]
+    for opts in cands[1:]:
+        nxt = []
+        for cur, path, nsw in frontier:
+            for k, o in enumerate(opts):
+                if 1 <= (o - cur).days <= MAX_BLOCK_GAP_DAYS:
+                    nxt.append((o, path + (o,), nsw + (0 if k == 0 else 1)))
+        if not nxt:
+            return list(dates)  # no consistent reading; leave the storm as-is
+        frontier = nxt
+
+    _, best, _ = min(frontier, key=lambda t: ((t[1][-1] - t[1][0]).days, t[2]))
+    mapping = dict(zip(blocks, best))
+    return [mapping[d] for d in dates]
+
 
 def flag_dates(observations: pd.DataFrame, min_gap_days: int = MAX_STORM_SPREAD_DAYS):
     """Detect day/month-transposition errors in the Date column.
