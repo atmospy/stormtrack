@@ -546,3 +546,29 @@ def test_counter_matches_the_parser_exactly(tmp_path):
     path = _write(tmp_path, {"2013": rows})
     obs = parse_workbook(path)["observations"]
     assert sum(count_positional_rows(path).values()) == len(obs) == 3
+
+
+def test_non_numeric_serial_is_ignored(tmp_path):
+    """A serial cell that is not a number must not start or end a storm."""
+    d = datetime(2019, 11, 9)
+    rows = [
+        HEADER_14,
+        _fix(1, "BOB", "BULBUL", d, "0000", 15.0, 88.0),
+        _fix("n/a", "BOB", "BULBUL", d, "0300", 15.2, 88.2),
+        _fix(1, "BOB", "BULBUL", d, "0600", 15.4, 88.4),
+    ]
+    res = parse_workbook(_write(tmp_path, {"2019": rows}))
+    assert res["storms"]["storm_id"].tolist() == ["2019-001"]
+    assert len(res["observations"]) == 3
+
+
+def test_count_positional_rows_skips_a_sheet_without_a_header(tmp_path):
+    from imdtrack.parse import count_positional_rows
+
+    d = datetime(2020, 5, 16)
+    good = [HEADER_14, _fix(1, "BOB", "AMPHAN", d, "0000", 10.4, 87.0)]
+    headerless = [["just", "a", "note"], [None, None, None]]
+    path = _write(tmp_path, {"2020": good, "2021": headerless})
+    counts = count_positional_rows(path)
+    assert counts.get(2020) == 1
+    assert counts.get(2021, 0) == 0
