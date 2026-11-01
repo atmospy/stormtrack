@@ -13,6 +13,9 @@ userguide/loading
 userguide/datamodel
 userguide/updates
 userguide/quality
+userguide/ibtracs
+userguide/realtime
+references
 ```
 
 ```{toctree}

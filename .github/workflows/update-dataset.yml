@@ -1,6 +1,6 @@
 name: Update dataset
 
-# Rebuild the committed dataset from the IMD workbook once a month.
+# Rebuild the committed datasets (IMD workbook + IBTrACS North Indian Ocean) once a month.
 # - If IMD hasn't changed, nothing is committed and no release is made.
 # - If IMD changed and the new file parses + validates, data/ is updated,
 #   committed, the version is bumped + tagged, and a release is published.
@@ -54,6 +54,10 @@ jobs:
           imdtrack build --data-dir data \
             ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
 
+      # Independent fail-safe: a bad IBTrACS file leaves data/ibtracs untouched.
+      - name: Rebuild IBTrACS (North Indian Ocean) dataset
+        run: imdtrack build-ibtracs --data-dir data ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
+
       - name: Commit and tag if the dataset changed
         id: commit
         run: |
@@ -78,7 +82,7 @@ jobs:
           )"
 
           git add data
-          git commit -m "data: refresh from IMD best-track workbook (${NEW_VERSION})"
+          git commit -m "data: refresh IMD best tracks and IBTrACS NI (${NEW_VERSION})"
           git tag "${NEW_VERSION}"
           git push origin HEAD --follow-tags
 

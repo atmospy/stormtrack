@@ -28,7 +28,7 @@ GRADE_COLORS = {
     "ESCS": "#d62828",
     "SuCS": "#6a040f",
 }
-BASIN_COLORS = {"BOB": "#2a78d6", "ARB": "#eb6834", "LAND": "#9aa0a6"}
+BASIN_COLORS = {"BOB": "#2a78d6", "ARB": "#eb6834", "LAND": "#9aa0a6", "NI": "#6a4c93"}
 
 # chrome
 _OCEAN = "#eaf2fb"
@@ -52,8 +52,8 @@ def _cartopy():
     return ccrs, cfeature, plt
 
 
-def _basemap(ax, extent, ccrs, cfeature):
-    ax.set_extent(extent, crs=ccrs.PlateCarree())
+def _basemap(ax, extent, ccrs, cfeature, label_size=8, crs=None, lon_ticks=None):
+    ax.set_extent(extent, crs=crs or ccrs.PlateCarree())
     ax.add_feature(cfeature.OCEAN.with_scale("50m"), facecolor=_OCEAN, zorder=0)
     ax.add_feature(cfeature.LAND.with_scale("50m"), facecolor=_LAND, zorder=0)
     ax.add_feature(cfeature.COASTLINE.with_scale("50m"), linewidth=0.6, edgecolor=_COAST, zorder=1)
@@ -62,7 +62,13 @@ def _basemap(ax, extent, ccrs, cfeature):
         draw_labels=True, linewidth=0.4, color="#c9c9c9", alpha=0.7, linestyle=(0, (1, 3))
     )
     gl.top_labels = gl.right_labels = False
-    gl.xlabel_style = gl.ylabel_style = {"size": 8, "color": "#666"}
+    gl.xlabel_style = gl.ylabel_style = {"size": label_size, "color": "#666"}
+    if lon_ticks is not None:  # explicit longitudes (needed on a dateline-centred map)
+        import matplotlib.ticker as mticker
+        from cartopy.mpl.ticker import LongitudeFormatter
+
+        gl.xlocator = mticker.FixedLocator(lon_ticks)
+        gl.xformatter = LongitudeFormatter()
 
 
 def _extent(lon, lat, pad):
@@ -331,7 +337,7 @@ def plot_tracks(
         )
 
     if color == "basin":
-        keys = [b for b in ("BOB", "ARB", "LAND") if b in set(obs["basin"].astype(object))]
+        keys = [b for b in ("BOB", "ARB", "LAND", "NI") if b in set(obs["basin"].astype(object))]
         handles = [Line2D([], [], color=BASIN_COLORS[b], lw=2.5, label=b) for b in keys]
         ttl = "Sub-basin"
     else:
@@ -351,4 +357,189 @@ def plot_tracks(
 
     if title:
         ax.set_title(title, fontsize=13, fontweight="bold", color=_INK)
+    return ax
+
+
+# Saffir-Simpson hurricane wind scale (1-min wind, kt) - colours chosen to read on a pale map.
+SS_CATEGORIES = [("TD", 0, "#7fb2e5"), ("TS", 34, "#2bb673"), ("C1", 64, "#f2c744"),
+                 ("C2", 83, "#f5a03a"), ("C3", 96, "#ec6a2c"), ("C4", 113, "#d62828"),
+                 ("C5", 137, "#8b1a6b")]  # fmt: skip
+SS_LONG = {"TD": "Tropical depression", "TS": "Tropical storm"}
+SS_LONG.update({f"C{i}": f"Category {i}" for i in range(1, 6)})
+
+
+def _category(wind, scale):
+    """Category label and colour for each wind (kt): ``("TS", "#2bb673")``; ``(None, grey)``
+    for missing wind. ``scale`` is ``"saffir-simpson"`` or ``"imd"`` (IMD grades)."""
+    import numpy as np
+
+    w = np.asarray(wind, dtype=float)
+    if scale == "imd":
+        from .analysis import grade_from_wind
+
+        g = grade_from_wind(w).astype(object)
+        return [(x, GRADE_COLORS[x]) if isinstance(x, str) else (None, "#999999") for x in g]
+    bounds = [b for _, b, _ in SS_CATEGORIES]
+    out = []
+    for v in w:
+        if not np.isfinite(v):
+            out.append((None, "#999999"))
+            continue
+        name, _, col = SS_CATEGORIES[max(np.searchsorted(bounds, v, side="right") - 1, 0)]
+        out.append((name, col))
+    return out
+
+
+def plot_forecast(
+    forecast, best=None, radii_km=None, ax=None, extent=None, title=None, scale="saffir-simpson"
+):
+    """Map of an official forecast, optionally with the track so far and its cone.
+
+    Every 24 h the forecast point is labelled with its lead time, wind (kt) and category.
+    The legend sits below the map (when ``ax`` is not given), so it never covers data.
+
+    Parameters
+    ----------
+    forecast : an ATCF forecast frame (``imdtrack.realtime.get_forecast``).
+    best : the storm's track so far (``bt.storm(...)`` or ``active_storms(...).storm(...)``),
+           drawn as the observed (best) track, its dots coloured by intensity.
+    radii_km : lead time (h) -> circle radius (km), e.g. ``verification.error_radii``;
+           draws the cone of uncertainty (union of circles swept along the track).
+    scale : how points are coloured and labelled by intensity category — ``"saffir-simpson"``
+           (default; TD, TS, C1–C5, suited to NHC/JTWC 1-minute winds) or ``"imd"`` (IMD
+           grades D … SuCS from the wind, approximate for non-IMD winds).
+    """
+    ccrs, cfeature, plt = _cartopy()
+    import math
+
+    import numpy as np
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch, Polygon
+
+    from .verification import cone_polygons
+
+    f = forecast.sort_values("tau").reset_index(drop=True)
+    polys = cone_polygons(f, radii_km) if radii_km is not None else []  # unwrapped longitudes
+    # draw in one continuous longitude frame so tracks crossing the dateline stay whole
+    f["lon"] = np.degrees(np.unwrap(np.radians(f["lon"].to_numpy())))
+    lon0 = float(f["lon"].iloc[0])
+    cats = _category(f["vmax"], scale)
+    b = best.sort_values("time").copy() if best is not None else None
+    if b is not None:  # bring the best track into the forecast's longitude frame
+        b["lon"] = lon0 + (b["lon"].to_numpy(dtype=float) - lon0 + 180) % 360 - 180
+    bcats = []
+    if b is not None:
+        bw = b["wind"] if "wind" in b else b.get("vmax", [np.nan] * len(b))
+        bcats = _category(bw, scale)
+
+    # legend entries, known up front so the figure can reserve room for them
+    handles = []
+    if b is not None:
+        handles.append(Line2D([], [], color=_INK, lw=1.8, label="observed track (best track)"))
+    handles.append(Line2D([], [], color="#a61e1e", ls="--", label=f"{f['tech'].iloc[0]} forecast"))
+    if polys:
+        handles.append(Patch(fc="#f7d9d6", ec="#c0504d", label="cone of uncertainty"))
+    seen = {n: c for n, c in cats + bcats if n}
+    order = [n for n, _, _ in SS_CATEGORIES] if scale != "imd" else GRADE_ORDER
+    longn = SS_LONG if scale != "imd" else GRADE_LONG
+    handles += [
+        Line2D([], [], marker="o", ls="", mfc=seen[n], mec="#4a0d0d", ms=9, label=longn[n])
+        for n in order
+        if n in seen
+    ]
+    ncol = min(3, len(handles))
+    rows = math.ceil(len(handles) / ncol)
+
+    xs = [f["lon"].to_numpy()] + [p[:, 0] for p in polys]
+    ys = [f["lat"].to_numpy()] + [p[:, 1] for p in polys]
+    if b is not None:
+        xs.append(b["lon"].to_numpy())
+        ys.append(b["lat"].to_numpy())
+    x, y = np.concatenate(xs), np.concatenate(ys)
+    if extent is None:  # a small margin, with a sane minimum size and aspect
+        w, h = max(x.max() - x.min(), 6.0), max(y.max() - y.min(), 4.0)
+        h = max(h, w / 1.7)
+        w = max(w, h / 1.6)
+        cx, cy = (x.max() + x.min()) / 2, (y.max() + y.min()) / 2
+        extent = [cx - w * 0.58, cx + w * 0.58, cy - h * 0.58, cy + h * 0.58]
+
+    own_fig = ax is None
+    if own_fig:
+        # place the axes by hand, in inches, so the map exactly fills its box: no side
+        # margins; room only for the title above, tick labels left / below, legend under
+        figw, ml, mr, mt = 8.0, 0.9, 0.35, 0.65
+        mb = 0.6 + 0.32 * rows + 0.12
+        maph = (figw - ml - mr) * (extent[3] - extent[2]) / (extent[1] - extent[0])
+        figh = maph + mb + mt
+        fig = plt.figure(figsize=(figw, figh))
+        # a map that straddles the dateline is centred on it; data keep their (unwrapped)
+        # longitudes and are transformed from plain PlateCarree
+        centre = 180 if (extent[1] > 180 or extent[0] < -180) else 0
+        ax = fig.add_axes([ml / figw, mb / figh, (figw - ml - mr) / figw, maph / figh],
+                          projection=ccrs.PlateCarree(central_longitude=centre))  # fmt: skip
+    pc = ccrs.PlateCarree()
+    shift = ax.projection.proj4_params.get("lon_0", 0) if hasattr(ax, "projection") else 0
+    if shift:  # extent given in the axes' own (dateline-centred) coordinates
+        x0 = extent[0] % 360 - 180
+        ext = [x0, x0 + (extent[1] - extent[0]), extent[2], extent[3]]
+        span = extent[1] - extent[0]
+        step = next((t for t in (20, 10, 5, 2, 1) if span / t >= 3), 1)  # >= 3 ticks
+        first = math.ceil(extent[0] / step) * step
+        ticks = [((v + 180) % 360) - 180 for v in np.arange(first, extent[1] + 1e-6, step)]
+        _basemap(ax, ext, ccrs, cfeature, label_size=11, crs=ax.projection, lon_ticks=ticks)
+    else:
+        _basemap(ax, extent, ccrs, cfeature, label_size=11)
+
+    # cone: dark rim underneath, light fill on top -> an outline of the union only
+    for p in polys:
+        ax.add_patch(Polygon(p, fc="#c0504d", ec="#c0504d", lw=1.8, transform=pc, zorder=0.7))
+    for p in polys:
+        ax.add_patch(Polygon(p, fc="#f7d9d6", ec="#f7d9d6", lw=0.8, transform=pc, zorder=0.8))
+
+    if b is not None:
+        ax.plot(b["lon"], b["lat"], "-", color=_INK, lw=1.8, transform=pc, zorder=4)
+        ax.scatter(b["lon"], b["lat"], s=34, c=[c for _, c in bcats], edgecolor=_INK, lw=0.8,
+                   transform=pc, zorder=5)  # fmt: skip
+    ax.plot(f["lon"], f["lat"], "--", color="#a61e1e", lw=1.4, transform=pc, zorder=5)
+    ax.scatter(f["lon"], f["lat"], s=95, c=[c for _, c in cats], edgecolor="#4a0d0d", lw=1.0,
+               transform=pc, zorder=6)  # fmt: skip
+
+    # labels every 24 h, centred above/below the marker (or beside it on steep tracks),
+    # alternating sides so neighbours don't collide
+    lat, lon = f["lat"].to_numpy(), f["lon"].to_numpy()
+    tau = f["tau"].to_numpy()
+    for k, i in enumerate(np.flatnonzero((tau % 24 == 0) & (tau > 0))):
+        j0, j1 = max(i - 1, 0), min(i + 1, len(f) - 1)
+        dx = (lon[j1] - lon[j0]) * np.cos(np.radians(lat[i]))
+        dy = lat[j1] - lat[j0]
+        n = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / n, dx / n  # unit normal, left of travel
+        if (ny < 0 or (ny == 0 and nx < 0)) == (k % 2 == 0):
+            nx, ny = -nx, -ny
+        vertical = abs(ny) >= abs(nx)
+        ha = "center" if vertical else ("left" if nx > 0 else "right")
+        va = ("bottom" if ny > 0 else "top") if vertical else "center"
+        dist = 15
+        wind = f["vmax"].iloc[i]
+        txt = f"+{int(tau[i])} h"
+        if np.isfinite(wind):
+            txt += f"\n{wind:.0f} kt" + (f" · {cats[i][0]}" if cats[i][0] else "")
+        ax.annotate(txt, (lon[i], lat[i]), xytext=(nx * dist, ny * dist),
+                    textcoords="offset points", ha=ha, va=va, fontsize=11.5,
+                    fontweight="bold", color=_INK, path_effects=_halo(), zorder=7,
+                    xycoords=pc._as_mpl_transform(ax), linespacing=1.15)  # fmt: skip
+
+    if own_fig:
+        fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=ncol,
+                   fontsize=11, frameon=False, columnspacing=1.6, handlelength=1.8)  # fmt: skip
+    else:
+        ax.legend(handles=handles, loc="best", fontsize=10, framealpha=0.92,
+                  edgecolor="#dddddd").set_zorder(8)  # fmt: skip
+
+    if title is None:
+        name = f["name"].dropna().iloc[-1] if "name" in f and f["name"].notna().any() else None
+        who = f"{name.title()} ({f['atcf_id'].iloc[0]})" if name else f["atcf_id"].iloc[0]
+        title = f"{who} — {f['tech'].iloc[0]} forecast from {f['init'].iloc[0]:%d %b %Y %H}Z"
+    if title:
+        ax.set_title(title, fontsize=14.5, fontweight="bold", color=_INK)
     return ax

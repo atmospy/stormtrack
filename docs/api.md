@@ -19,6 +19,31 @@
    :undoc-members:
 ```
 
+## IBTrACS, analysis and comparison
+
+```{eval-rst}
+.. autofunction:: imdtrack.load_ibtracs
+.. autofunction:: imdtrack.fetch_ibtracs
+.. autofunction:: imdtrack.build_ibtracs
+.. autofunction:: imdtrack.compare_tracks
+.. autoclass:: imdtrack.Comparison
+   :members:
+.. automodule:: imdtrack.analysis
+   :members:
+```
+
+## Real-time data, verification and wind conversion
+
+```{eval-rst}
+.. automodule:: imdtrack.realtime
+   :members:
+.. automodule:: imdtrack.atcf
+   :members:
+.. automodule:: imdtrack.verification
+   :members:
+.. autofunction:: imdtrack.plot_forecast
+```
+
 ## Pipeline (rebuild from the IMD workbook)
 
 ```{eval-rst}
