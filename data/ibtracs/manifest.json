@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "source_url": "https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-ibtracs/v04r01/access/csv/ibtracs.NI.list.v04r01.csv",
+  "source_sha256": "6e0dd2dde1f22c4bf03995beb21944bf5976536c747b23ba85c6d300aeab69ff",
+  "version": "v04r01",
+  "basin": "NI",
+  "generated_at": "2026-11-01T13:26:12+00:00",
+  "n_storms": 1762,
+  "n_obs": 56121,
+  "year_min": 1842,
+  "year_max": 2025
+}

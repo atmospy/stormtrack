@@ -32,6 +32,7 @@ class BestTracks:
     remarks: pd.DataFrame
     storms: pd.DataFrame
     sha256: Optional[str] = None
+    source: str = "imd"
 
     def to_dataframe(self) -> pd.DataFrame:
         """Return the tidy observations frame (alias for ``.observations``)."""
@@ -41,7 +42,7 @@ class BestTracks:
         """Return a 2-D ``(storm, step)`` :class:`xarray.Dataset`."""
         from .dataset import to_xarray
 
-        return to_xarray(self.observations, self.storms)
+        return to_xarray(self.observations, self.storms, self.source)
 
     def storm(self, key: str) -> pd.DataFrame:
         """Track for a single storm, by ``storm_id`` (``"2021-002"``) or name
@@ -98,11 +99,15 @@ class BestTracks:
             changed = True
 
         if not changed:
-            return BestTracks(obs, self.remarks.copy(), self.storms.copy(), self.sha256)
+            return BestTracks(
+                obs, self.remarks.copy(), self.storms.copy(), self.sha256, self.source
+            )
 
         from .parse import _summarize_storms
 
-        return BestTracks(obs, self.remarks.copy(), _summarize_storms(obs), self.sha256)
+        return BestTracks(
+            obs, self.remarks.copy(), _summarize_storms(obs), self.sha256, self.source
+        )
 
     def __repr__(self) -> str:
         n_obs = len(self.observations)
@@ -110,7 +115,8 @@ class BestTracks:
         yrs = ""
         if n_storm:
             yrs = f", {int(self.storms['year'].min())}-{int(self.storms['year'].max())}"
-        return f"<BestTracks: {n_storm} storms, {n_obs} fixes{yrs}>"
+        tag = "" if self.source == "imd" else f" [{self.source}]"
+        return f"<BestTracks{tag}: {n_storm} storms, {n_obs} fixes{yrs}>"
 
 
 def _parquet_paths(cache_dir: Path):

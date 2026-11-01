@@ -157,10 +157,59 @@ imd.plot_track(bt.storm("tauktae"), color="grade")   # or any storm_id / name
        alt="Cyclone Tauktae (2021) track coloured by IMD grade" width="46%">
 </p>
 
+## IBTrACS and cross-dataset analysis
+
+The same package loads the North Indian Ocean slice of
+[IBTrACS](https://www.ncei.noaa.gov/products/international-best-track-archive) in
+the **identical schema**, so every analysis runs on either record. Like the IMD data
+it is committed to the repo ([`data/ibtracs/`](data/ibtracs/), ~1 MB) and refreshed by
+the monthly Action, so there is no CSV parsing on your side.
+
+```python
+import imdtrack as imd
+
+imd_bt = imd.load()                      # IMD RSMC New Delhi, 1982-
+ib_bt = imd.load_ibtracs()               # IBTrACS North Indian Ocean, 1842-
+ib_wp = imd.load_ibtracs(basin="WP", source="ncei")   # any other basin, straight from NOAA
+
+A = imd.analysis                         # works on either dataset
+A.lifetime_max(ib_bt)                    # peak intensity, time and place per storm
+A.rapid_intensification(imd_bt)          # >= 30 kt / 24 h events
+A.annual_counts(ib_bt)                   # storms per year by strength
+A.ace(ib_bt)                             # accumulated cyclone energy
+A.match_controls(events, pool)           # matched control storms for composites
+
+cmp = imd.compare_tracks(imd_bt, ib_bt)  # pair storms by track, compare every common fix
+cmp.summary()                            # position / wind / pressure agreement
+```
+
+`compare_tracks(..., ib_wind="usa")` compares IMD with JTWC's independent estimate
+(1-min wind, so not like-for-like with IMD's 3-min; the WMO guidance only converts 1-min ↔ 10-min, see `analysis.convert_vmax`), while `ib_wind="wmo"`
+checks that IBTrACS reproduces IMD's own submission. From the shell:
+`imdtrack compare --out diffs.csv`.
+
+## Real-time storms, forecast verification and cones
+
+NHC and JTWC publish ATCF decks; `imdtrack.realtime` reads them into the same schema,
+and `imdtrack.verification` scores any forecast against any best track — e.g. an NHC or
+JTWC forecast against the IMD record. (IMD, JMA, BoM and Météo-France offer no
+machine-readable forecast feed, so their forecasts are not supported.)
+
+```python
+io = imd.realtime.active_storms("jtwc", basins=["io"])   # live JTWC North Indian Ocean
+gd = imd.realtime.get_guidance("AL042026")                # NHC a-deck: every model & cycle
+err = imd.verification.forecast_errors(gd, best_track)    # track / wind errors by lead time
+radii = imd.verification.error_radii(err, pct=67)         # NHC's 67 % cone-circle definition
+imd.plot_forecast(fc, best=track, radii_km=radii)         # forecast + cone map
+```
+
+Methods and definitions are referenced to the literature in
+[`docs/references.md`](docs/references.md).
+
 ## Staying up to date
 
 A [monthly GitHub Action](.github/workflows/update-dataset.yml) re-fetches the
-IMD workbook and, only if it parses and passes validation, updates `data/` — a
+IMD workbook (and IBTrACS) and, only if it parses and passes validation, updates `data/` — a
 broken upload can never overwrite the good published data. You normally don't
 have to do anything; `imd.load(update=True)` pulls the latest.
 

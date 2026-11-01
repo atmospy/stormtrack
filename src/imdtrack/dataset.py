@@ -14,6 +14,17 @@ import pandas as pd
 
 from . import _schema as S
 
+_ATTRS = {
+    "imd": {
+        "title": "IMD RSMC New Delhi best track data",
+        "source": "India Meteorological Department (rsmcnewdelhi.imd.gov.in)",
+    },
+    "ibtracs": {
+        "title": "IBTrACS best track data",
+        "source": "NOAA NCEI International Best Track Archive for Climate Stewardship",
+    },
+}
+
 _OBS_VARS = [
     "time",
     "lat",
@@ -26,9 +37,11 @@ _OBS_VARS = [
     "oci",
     "oci_diameter",
 ]
+# IBTrACS-only per-fix variables (present when the frame comes from load_ibtracs)
+_EXTRA_VARS = ["wmo_wind", "usa_wind", "wmo_pres", "usa_pres", "sshs", "dist2land", "storm_speed"]
 
 
-def to_xarray(observations: pd.DataFrame, storms: pd.DataFrame | None = None):
+def to_xarray(observations: pd.DataFrame, storms: pd.DataFrame | None = None, source: str = "imd"):
     """Convert the tidy observations frame to an ``xarray.Dataset``.
 
     Requires :mod:`xarray` (and ``numpy``).  Import is deferred so that pandas
@@ -49,7 +62,7 @@ def to_xarray(observations: pd.DataFrame, storms: pd.DataFrame | None = None):
     cols = obs["step"].to_numpy()
 
     data_vars = {}
-    for var in _OBS_VARS:
+    for var in [v for v in _OBS_VARS + _EXTRA_VARS if v in obs.columns]:
         col = obs[var]
         if var == "time":
             grid = np.full((n_storm, max_step), np.datetime64("NaT", "ns"), dtype="datetime64[ns]")
@@ -91,8 +104,7 @@ def to_xarray(observations: pd.DataFrame, storms: pd.DataFrame | None = None):
     ds = xr.Dataset(data_vars=data_vars, coords=coords)
     ds.attrs.update(
         {
-            "title": "IMD RSMC New Delhi best track data",
-            "source": "India Meteorological Department (rsmcnewdelhi.imd.gov.in)",
+            **_ATTRS[source],
             "featureType": "trajectory",
             "n_storms": n_storm,
             "grade_definitions": "; ".join(f"{k}={v}" for k, v in S.GRADE_LONG.items()),
