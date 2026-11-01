@@ -5,7 +5,11 @@
   "access_right": "open",
   "license": "BSD-3-Clause",
   "creators": [
-    { "name": "Syed, Hamid Ali", "orcid": "0000-0002-7188-2544" }
+    {
+      "name": "Syed, Hamid Ali",
+      "orcid": "0000-0002-7188-2544",
+      "affiliation": "atmospy"
+    }
   ],
   "keywords": [
     "cyclone",
@@ -16,5 +20,18 @@
     "meteorology",
     "xarray",
     "pandas"
-  ]
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/atmospy/stormtrack",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://stormtrack.readthedocs.io/",
+      "relation": "isDocumentedBy",
+      "scheme": "url"
+    }
+  ],
+  "notes": "Formerly published as 'imdtrack'; the project was renamed 'stormtrack' and moved to the atmospy GitHub organisation (https://github.com/atmospy/stormtrack). All versions share one concept DOI."
 }
