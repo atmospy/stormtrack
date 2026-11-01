@@ -395,15 +395,19 @@ def plot_forecast(
 ):
     """Map of an official forecast, optionally with the track so far and its cone.
 
+    Every 24 h the forecast point is labelled with its lead time, wind (kt) and category.
+    The legend sits below the map (when ``ax`` is not given), so it never covers data.
+
+    Parameters
+    ----------
     forecast : an ATCF forecast frame (``imdtrack.realtime.get_forecast``).
-    best : the storm's track so far (``bt.storm(...)`` or ``active_storms(...).storm(...)``).
+    best : the storm's track so far (``bt.storm(...)`` or ``active_storms(...).storm(...)``),
+           drawn as the observed (best) track, its dots coloured by intensity.
     radii_km : lead time (h) -> circle radius (km), e.g. ``verification.error_radii``;
            draws the cone of uncertainty (union of circles swept along the track).
     scale : how points are coloured and labelled by intensity category — ``"saffir-simpson"``
            (default; TD, TS, C1–C5, suited to NHC/JTWC 1-minute winds) or ``"imd"`` (IMD
            grades D … SuCS from the wind, approximate for non-IMD winds).
-    Every 24 h the forecast point is labelled with its lead time, wind (kt) and category.
-    The legend sits below the map (when ``ax`` is not given), so it never covers data.
     """
     ccrs, cfeature, plt = _cartopy()
     import math
