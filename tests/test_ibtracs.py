@@ -44,6 +44,17 @@ def csv(tmp_path):
         + _storm("2020137N10087", "UNNAMED", "2020-05-17 00:00", [25, 25, 30])
         + _storm("2020138N10087", "SPUR", "2020-05-18 00:00", [25, 25], track="spur-merge")
         + _storm("2020200N12150", "NOISE", "2020-07-18 00:00", [35, 40, 50], 12, 150, basin="WP")
+        # a recent storm that exists only as a provisional track, and one with main + provisional rows
+        + _storm(
+            "2020300N12080",
+            "NEWEST",
+            "2020-10-26 00:00",
+            [35, 60, 80],
+            12,
+            80,
+            track="US-PROVISIONAL",
+        )
+        + _storm("2020136N10087", "AMPHAN", "2020-05-19 00:00", [20, 20], track="US-PROVISIONAL")
     )
     return _csv(tmp_path, rows)
 
@@ -84,7 +95,7 @@ def test_build_publish_and_load_roundtrip(csv, tmp_path, monkeypatch):
     monkeypatch.setattr(ib, "_validate_published", lambda bt: None)  # tiny fixture
     data = tmp_path / "data"
     changed, m = ib.build_ibtracs(data)
-    assert changed and m.n_storms == 2  # AMPHAN + UNNAMED (spur dropped, WP excluded)
+    assert changed and m.n_storms == 3  # AMPHAN + UNNAMED + NEWEST (spur dropped, WP excluded)
     assert (data / "ibtracs" / "observations.parquet").exists()
     changed2, _ = ib.build_ibtracs(data)
     assert not changed2  # same content hash -> no rewrite
@@ -208,3 +219,28 @@ def test_published_ibtracs_dataset_is_in_the_repo():
         assert (data / "ibtracs" / name).exists(), f"data/ibtracs/{name} missing from the checkout"
     bt = ib._read_published_dir(data / "ibtracs")
     assert len(bt.storms) >= 1500 and bt.observations["grade"].cat.ordered
+
+
+def test_monthly_climatology_since():
+    o = pd.concat(
+        [_obs([40, 50], sid="old").assign(year=1900), _obs([40, 50], sid="new").assign(year=2020)]
+    )
+    full = A.monthly_climatology(o)
+    recent = A.monthly_climatology(o, since=2000)
+    assert full["per_year"].iloc[0] == pytest.approx(2 / 121)  # divided by the whole 1900–2020 span
+    assert recent["storms"].iloc[0] == 1 and recent["per_year"].iloc[0] == pytest.approx(1.0)
+
+
+def test_provisional_only_storms_are_kept_but_not_duplicates(csv):
+    bt = st.load_ibtracs(path=csv)
+    st_ = bt.storms.set_index("storm_id")
+    assert "2020300N12080" in st_.index  # only exists as US-PROVISIONAL: must not vanish
+    assert st_.loc["2020300N12080", "max_wind"] == 80
+    assert set(
+        bt.observations.loc[bt.observations["storm_id"] == "2020300N12080", "track_type"]
+    ) == {"US-PROVISIONAL"}
+    amphan = bt.observations[bt.observations["storm_id"] == "2020136N10087"]
+    assert set(amphan["track_type"]) == {"main"}  # its provisional rows are dropped, main is kept
+    assert "2020138N10087" not in st_.index  # spur still dropped
+    everything = st.load_ibtracs(path=csv, main_only=False)
+    assert {"spur-merge", "US-PROVISIONAL", "main"} <= set(everything.observations["track_type"])

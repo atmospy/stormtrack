@@ -268,3 +268,134 @@ def test_plot_forecast_dateline_and_edge_cases():
     assert st.plot_forecast(nowind) is not None
     assert st.plot_forecast(dl.iloc[:1]) is not None
     plt.close("all")
+
+
+# --------------------------------------------------------------------------- robustness
+
+
+class _Resp:
+    def __init__(self, body, length=None):
+        self._body = body
+        self.headers = {} if length is None else {"Content-Length": str(length)}
+
+    def read(self):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def test_get_retries_truncated_and_transient_but_not_4xx(monkeypatch):
+    import urllib.error
+
+    monkeypatch.setattr(R, "_BACKOFF", 0)
+    calls = []
+
+    def flaky(req, timeout=None):
+        calls.append(1)
+        if len(calls) == 1:
+            return _Resp(b"short", length=100)  # truncated transfer -> IncompleteRead
+        if len(calls) == 2:
+            raise urllib.error.HTTPError(req.full_url, 503, "busy", {}, None)
+        return _Resp(b"ok", length=2)
+
+    monkeypatch.setattr(R.urllib.request, "urlopen", flaky)
+    assert R._get("http://x/f.dat") == b"ok" and len(calls) == 3
+
+    calls.clear()
+
+    def gone(req, timeout=None):
+        calls.append(1)
+        raise urllib.error.HTTPError(req.full_url, 404, "nope", {}, None)
+
+    monkeypatch.setattr(R.urllib.request, "urlopen", gone)
+    with pytest.raises(urllib.error.HTTPError):
+        R._get("http://x/f.dat")
+    assert len(calls) == 1  # a 404 is final
+
+    calls.clear()
+    monkeypatch.setattr(R.urllib.request, "urlopen", lambda r, timeout=None: _Resp(b"x", length=9))
+    with pytest.raises(
+        R.http.client.IncompleteRead
+    ):  # still short after every retry: raise, don't parse
+        R._get("http://x/f.dat", retries=2)
+
+
+def test_active_storms_skips_files_untouched_since_the_age_cut(monkeypatch):
+    listing = (
+        '<a href="bio042026.dat">bio042026.dat</a>   2026-11-01 06:10  1K\n'
+        '<a href="bio032026.dat">bio032026.dat</a>   2026-06-18 02:47  1K\n'
+        '<a href="bio052026.dat">bio052026.dat</a>\n'  # no date: can't be skipped
+    )
+    fetched = []
+
+    def fake(url, timeout=60.0):
+        if url.endswith("/"):
+            return listing.encode()
+        fetched.append(url.rsplit("/", 1)[1])
+        return BEST.encode()
+
+    monkeypatch.setattr(R, "_get", fake)
+    bt = R.active_storms("jtwc", basins=["io"], now="2026-11-01 12:00")
+    assert sorted(fetched) == ["bio042026.dat", "bio052026.dat"]  # bio03 (June) never requested
+    assert "IO042026" in set(bt.storms["storm_id"])
+
+
+def test_southern_hemisphere_basins_by_genesis_longitude():
+    from stormtrack.atcf import sh_basin
+
+    assert [sh_basin(x) for x in (60.0, 134.9, 135.0, 170.0, -150.0, -121.0, -100.0, -40.0, 10.0)] == [
+        "SI", "SI", "SP", "SP", "SP", "SP", "SA", "SA", "SA",
+    ]  # fmt: skip
+    deck = parse_atcf(
+        "SH, 01, 2026010100, , BEST, 0, 150S, 0700E, 40, 990, TS\n"
+        "SH, 02, 2026010100, , BEST, 0, 150S, 1700E, 40, 990, TS\n"
+        "SH, 02, 2026010106, , BEST, 0, 150S, 1790E, 45, 985, TS"
+    )
+    obs = best_track_frame(deck).set_index("storm_id")["basin"]
+    assert obs["SH012026"] == "SI" and set(obs["SH022026"]) == {"SP"}  # 02 crosses 180: keeps SP
+
+
+def test_error_radii_excludes_the_analysis_and_can_pick_leads():
+    e = pd.DataFrame(
+        {
+            "tau": [0] * 12 + [12] * 12 + [24] * 12,
+            "track_err_km": [0.0] * 12 + list(range(12)) + list(range(100, 112)),
+        }
+    )
+    assert 0 not in V.error_radii(e).index
+    assert list(V.error_radii(e, taus=[24]).index) == [24]
+
+
+def test_cone_geojson_union_contains_points_and_splits_the_dateline():
+    pytest.importorskip("shapely")
+    from shapely.geometry import Point, shape
+
+    row = "WP, 01, 2026010100, 03, JTWC, {t}, {la}N, {lo}E, 50, 990, TY"
+    fc = parse_atcf(
+        "\n".join(
+            row.format(t=t, la=la, lo=lo)
+            for t, la, lo in [(0, 100, 1780), (24, 115, 1795), (48, 130, 1810)]
+        )
+    )
+    g = V.cone_geojson(fc, {24: 80.0, 48: 150.0})
+    assert g["type"] == "MultiPolygon"  # split at 180
+    xs = [x for poly in g["coordinates"] for ring in poly for x, _ in ring]
+    assert min(xs) >= -180 and max(xs) <= 180
+    shp = shape(g)
+    assert shp.is_valid
+    for lon, lat in [(178.0, 10.0), (-179.0, 13.0)]:  # forecast points: 178E, and 181E == -179
+        assert shp.contains(Point(lon, lat)) or shp.buffer(1e-6).contains(Point(lon, lat))
+
+    reg = parse_atcf(
+        "\n".join(
+            row.format(t=t, la=la, lo=lo)
+            for t, la, lo in [(0, 100, 870), (24, 120, 850), (48, 140, 830)]
+        )
+    )
+    one = V.cone_geojson(reg, {24: 80.0, 48: 150.0})
+    assert one["type"] == "Polygon" and shape(one).contains(Point(85.0, 12.0))
+    assert V.cone_geojson(reg.iloc[:1], {24: 80.0}) is None

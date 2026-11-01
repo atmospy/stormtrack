@@ -5471,6 +5471,8 @@ dev = [
     { name = "pytest", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "shapely", version = "2.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "shapely", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "xarray", version = "2024.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "xarray", version = "2025.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "xarray", version = "2026.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -5501,6 +5503,10 @@ docs = [
     { name = "xarray", version = "2024.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "xarray", version = "2025.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "xarray", version = "2026.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+geo = [
+    { name = "shapely", version = "2.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "shapely", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 lint = [
     { name = "black", version = "25.11.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -5553,6 +5559,8 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
     { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.5" },
+    { name = "shapely", marker = "extra == 'dev'", specifier = ">=2.0" },
+    { name = "shapely", marker = "extra == 'geo'", specifier = ">=2.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5" },
     { name = "xarray", marker = "extra == 'all'", specifier = ">=2022.3" },
@@ -5560,7 +5568,7 @@ requires-dist = [
     { name = "xarray", marker = "extra == 'docs'", specifier = ">=2022.3" },
     { name = "xarray", marker = "extra == 'xarray'", specifier = ">=2022.3" },
 ]
-provides-extras = ["all", "dev", "docs", "lint", "pipeline", "plot", "xarray"]
+provides-extras = ["all", "dev", "docs", "geo", "lint", "pipeline", "plot", "xarray"]
 
 [[package]]
 name = "tabulate"

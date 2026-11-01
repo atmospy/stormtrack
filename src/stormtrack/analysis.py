@@ -127,15 +127,21 @@ def annual_counts(x, thresholds: Optional[dict] = None, by_basin: bool = False) 
     return out.reset_index()
 
 
-def monthly_climatology(x, min_wind: float = 0.0, by_basin: bool = False) -> pd.DataFrame:
+def monthly_climatology(
+    x, min_wind: float = 0.0, by_basin: bool = False, since: Optional[int] = None
+) -> pd.DataFrame:
     """Mean number of storms per calendar month (by month of genesis).
 
     Only storms reaching ``min_wind`` are counted. Returns ``month, storms``
     (total), ``per_year`` (total / number of seasons spanned) and, with
-    ``by_basin``, one row per basin.
+    ``by_basin``, one row per basin. ``since`` restricts the record to seasons >= that year —
+    use it for long archives (IBTrACS starts in 1842, so dividing by the whole span gives
+    meaninglessly small rates; 1980 is a common start for the satellite era).
     """
     lm = lifetime_max(x)
     lm = lm[lm["lmi_wind"] >= min_wind]
+    if since is not None:
+        lm = lm[lm["year"] >= since]
     n_years = max(int(lm["year"].max() - lm["year"].min()) + 1, 1) if len(lm) else 1
     lm = lm.assign(month=lm["start_time"].dt.month)
     keys = ["basin", "month"] if by_basin else ["month"]

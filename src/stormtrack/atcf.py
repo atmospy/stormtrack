@@ -45,6 +45,18 @@ TC_TYPES = {"TD", "TS", "TY", "ST", "TC", "HU", "SD", "SS"}
 # ATCF basin code -> the IBTrACS genesis-basin code used elsewhere in stormtrack.
 BASIN_TO_IBTRACS = {"AL": "NA", "EP": "EP", "CP": "EP", "WP": "WP", "IO": "NI", "SH": "SH"}
 
+
+def sh_basin(lon0: float) -> str:
+    """IBTrACS Southern-Hemisphere basin of a storm from its genesis longitude: South Indian
+    ``SI`` (20°E–135°E), South Pacific ``SP`` (135°E–120°W), otherwise South Atlantic ``SA``.
+    ATCF has a single ``SH`` basin, so this recovers the finer IBTrACS split."""
+    if 20 <= lon0 < 135:
+        return "SI"
+    if lon0 >= 135 or lon0 < -120:
+        return "SP"
+    return "SA"
+
+
 _QUADS = ("ne", "se", "sw", "nw")
 _NUMBER_WORDS = (
     "ONE TWO THREE FOUR FIVE SIX SEVEN EIGHT NINE TEN ELEVEN TWELVE THIRTEEN FOURTEEN FIFTEEN "
@@ -178,4 +190,8 @@ def best_track_frame(deck: pd.DataFrame) -> pd.DataFrame:
         }
     )  # fmt: skip
     obs["step"] = obs.groupby("storm_id", sort=False).cumcount()
+    sh = obs["atcf_basin"] == "SH"
+    if sh.any():  # a storm keeps the basin it formed in
+        lon0 = obs.groupby("storm_id", sort=False)["lon"].transform("first")
+        obs.loc[sh, "basin"] = lon0[sh].map(sh_basin)
     return obs.reset_index(drop=True)

@@ -162,15 +162,22 @@ def error_summary(errors: pd.DataFrame, by=("tech", "tau")) -> pd.DataFrame:
     ).reset_index()
 
 
-def error_radii(errors: pd.DataFrame, pct: float = 67.0, min_n: int = 10, units: str = "km"):
+def error_radii(
+    errors: pd.DataFrame, pct: float = 67.0, min_n: int = 10, units: str = "km", taus=None
+):
     """Cone-circle radii by lead time: the ``pct``-th percentile of track error.
 
     NHC uses ``pct=67`` of the previous five years' official-forecast errors. Lead
-    times with fewer than ``min_n`` samples are dropped. Returns a ``Series`` indexed
-    by ``tau`` (hours); ``units`` is ``"km"`` or ``"nm"``.
+    times with fewer than ``min_n`` samples are dropped; lead time 0 (the analysis, not a
+    forecast) is always excluded, and ``taus`` optionally keeps only those lead times (e.g.
+    NHC's 12, 24, 36, 48, 60, 72, 96, 120). Returns a ``Series`` indexed by ``tau`` (hours);
+    ``units`` is ``"km"`` or ``"nm"``.
     """
     if units not in ("km", "nm"):
         raise ValueError("units must be 'km' or 'nm'")
+    errors = errors[errors["tau"] > 0]
+    if taus is not None:
+        errors = errors[errors["tau"].isin(list(taus))]
     g = errors.groupby("tau")["track_err_km"]
     r = g.quantile(pct / 100.0)[g.size() >= min_n]
     return (r / KM_PER_NM if units == "nm" else r).rename(f"p{pct:g}_{units}")
@@ -231,3 +238,34 @@ def cone_polygons(forecast: pd.DataFrame, radii_km, n: int = 72) -> list:
     circles = [_circle(la, lo, ra, n) for la, lo, ra in zip(f["lat"], lon, rad)]
     # _circle returns (lon, lat) around an unwrapped centre; keep that frame
     return [_hull(np.vstack([circles[i], circles[i + 1]])) for i in range(len(circles) - 1)]
+
+
+def cone_geojson(forecast: pd.DataFrame, radii_km, n: int = 72):
+    """The forecast cone as a single GeoJSON geometry (``Polygon`` / ``MultiPolygon``).
+
+    Unlike :func:`cone_polygons` (overlapping per-segment hulls in a locally unwrapped
+    longitude frame), this unions them into one valid shape and, when the cone crosses the
+    antimeridian, splits it at ±180° so every coordinate stays in ``-180..180``. Returns
+    ``None`` when the forecast has fewer than two usable points.
+
+    Requires ``shapely``: ``pip install 'stormtrack[geo]'``. Hulls are built in lon/lat
+    degrees, so they are slightly stretched at high latitudes.
+    """
+    try:
+        from shapely.affinity import translate
+        from shapely.geometry import Polygon, box, mapping
+        from shapely.ops import unary_union
+    except ImportError as exc:  # pragma: no cover - exercised only without shapely
+        raise ImportError("cone_geojson needs shapely: pip install 'stormtrack[geo]'") from exc
+
+    polys = cone_polygons(forecast, radii_km, n)
+    if not polys:
+        return None
+    geom = unary_union([Polygon(p).buffer(0) for p in polys])
+    x0, x1 = geom.bounds[0], geom.bounds[2]
+    parts = []
+    for k in range(int(np.floor((x0 + 180) / 360)), int(np.floor((x1 + 180) / 360)) + 1):
+        piece = geom.intersection(box(-180 + 360 * k, -90, 180 + 360 * k, 90))
+        if not piece.is_empty:
+            parts.append(translate(piece, xoff=-360 * k))
+    return mapping(unary_union(parts))

@@ -111,7 +111,11 @@ def load_ibtracs(
            repo under ``data/ibtracs/`` — fast, no CSV parsing. ``"ncei"`` downloads
            the CSV from NOAA/NCEI (any ``basin``; ``None`` = the ~330 MB global file).
     since, until : inclusive season (year) bounds.
-    main_only : drop ``spur``/``PROVISIONAL`` duplicate rows (``TRACK_TYPE != main``).
+    main_only : keep **one track per storm** — its ``main`` track, or, for storms that have no
+           ``main`` track yet (the newest seasons, still in IBTrACS' provisional state), their
+           ``PROVISIONAL`` / ``US-PROVISIONAL`` track. ``spur`` duplicates are always dropped.
+           The ``track_type`` column says which kind each fix is, so provisional winds (e.g. JTWC's,
+           not yet reviewed) can be filtered out. ``False`` keeps every row.
     keep_nature : restrict to these ``NATURE`` codes, e.g. ``("TS",)``.
 
     The ``storm_id`` is the IBTrACS ``SID``; ``year`` the season; ``basin`` the
@@ -133,7 +137,7 @@ def load_ibtracs(
         path = fetch_ibtracs(basin, version=version, cache_dir=cache_dir, update=update)
     df = _read_csv(Path(path))
     if main_only:
-        df = df[df["track_type"].astype(str).str.startswith("main")]
+        df = df[_one_track(df["sid"], df["track_type"])]
     if keep_nature:
         df = df[df["nature"].isin(keep_nature)]
     obs = _tidy(df)
@@ -158,11 +162,27 @@ def _bundle(obs, since, until) -> BestTracks:
     )
 
 
+_PROVISIONAL_TYPES = ("PROVISIONAL", "US-PROVISIONAL")
+
+
+def _one_track(sid: pd.Series, track_type: pd.Series) -> pd.Series:
+    """Boolean mask selecting one track per storm: ``main`` rows, or — for a storm with no
+    ``main`` rows at all — its (US-)PROVISIONAL rows. Spur tracks never qualify.
+
+    Filtering on ``main`` alone silently dropped whole storms that only exist as provisional
+    tracks (e.g. 2025's Montha, Shakhti and Ditwah in the North Indian Ocean).
+    """
+    tt = track_type.astype(str)
+    is_main = tt.str.startswith("main")
+    has_main = is_main.groupby(sid).transform("any")
+    return is_main | (~has_main & tt.isin(_PROVISIONAL_TYPES))
+
+
 def _select(bt, since, until, keep_nature, main_only) -> BestTracks:
     """Apply the load filters to an already-tidy bundle (the published dataset)."""
     obs = bt.observations
     if main_only:
-        obs = obs[obs["track_type"].astype(str).str.startswith("main")]
+        obs = obs[_one_track(obs["storm_id"], obs["track_type"])]
     if keep_nature:
         obs = obs[obs["nature"].isin(keep_nature)]
     out = _bundle(obs.copy(), since, until)
