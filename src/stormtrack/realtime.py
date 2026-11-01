@@ -22,8 +22,12 @@ you can reach.
 from __future__ import annotations
 
 import gzip
+import http.client
 import re
+import time
+import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -43,16 +47,62 @@ JTWC_FST_MIRRORS = (
 _UA = {"User-Agent": "stormtrack (https://github.com/atmospy/stormtrack)"}
 
 
-def _get(url: str, timeout: float = 60.0) -> bytes:
-    req = urllib.request.Request(url, headers=_UA)
-    with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
-        data = r.read()
-    return gzip.decompress(data) if url.endswith(".gz") else data
+_INDEX_ROW = re.compile(
+    r'href="(b[a-z]{2}\d{6}\.dat)"[^>]*>[^<]*</a>'
+    r"(?:(?:</td><td[^>]*>|\s+)\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}))?"
+)
+_RETRIES = 3
+_BACKOFF = 1.0  # seconds; doubled after each failed attempt
+
+
+def _transient(exc: BaseException) -> bool:
+    """Network failures worth retrying: truncated/reset transfers, timeouts, 5xx and 429."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code >= 500 or exc.code == 429
+    return isinstance(
+        exc,
+        (urllib.error.URLError, http.client.IncompleteRead, http.client.RemoteDisconnected,
+         ConnectionError, TimeoutError, OSError),
+    )  # fmt: skip
+
+
+def _get(url: str, timeout: float = 60.0, retries: int = _RETRIES) -> bytes:
+    """GET ``url`` (gunzipping ``*.gz``), retrying transient failures with backoff.
+
+    NHC's server sometimes truncates long transfers; the body length is checked against
+    ``Content-Length`` so a short read is retried instead of silently parsed.
+    """
+    last: Optional[BaseException] = None
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url, headers=_UA)
+            with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
+                data = r.read()
+                expected = r.headers.get("Content-Length")
+            if expected is not None and expected.isdigit() and len(data) != int(expected):
+                raise http.client.IncompleteRead(data, int(expected) - len(data))
+            return gzip.decompress(data) if url.endswith(".gz") else data
+        except Exception as exc:  # noqa: BLE001 - re-raised unless transient
+            if not _transient(exc) or attempt == retries - 1:
+                raise
+            last = exc
+            time.sleep(_BACKOFF * 2**attempt)
+    raise last  # pragma: no cover - the loop always returns or raises
 
 
 def _list(url: str, pattern: str, timeout: float = 60.0) -> list:
     html = _get(url, timeout).decode("utf-8", "replace")
     return sorted(set(re.findall(pattern, html)))
+
+
+def _list_mtimes(url: str, timeout: float = 60.0) -> dict:
+    """``{filename: modification time or NaT}`` for the ``b<basin><nn><year>.dat`` files in
+    an Apache directory index (both NHC's and the UCAR mirror list a date next to each file)."""
+    html = _get(url, timeout).decode("utf-8", "replace")
+    out = {}
+    for m in _INDEX_ROW.finditer(html):
+        out[m.group(1)] = pd.Timestamp(m.group(2)) if m.group(2) else pd.NaT
+    return out
 
 
 def _now(now) -> pd.Timestamp:
@@ -70,6 +120,7 @@ def active_storms(
     invests: bool = False,
     now=None,
     timeout: float = 60.0,
+    workers: int = 8,
 ) -> BestTracks:
     """Best tracks of currently active systems, as a :class:`~stormtrack.BestTracks`.
 
@@ -83,6 +134,9 @@ def active_storms(
              server keeps finished storms' files for the whole season.
     invests : keep invest areas (ATCF numbers 90–99). Default: only numbered storms.
     now : reference time (UTC) for the age cut, for reproducibility. Default: now.
+    workers : files are fetched in parallel; NHC's listing also lets files not touched within
+             ``max_age_hours`` be skipped without a request (the UCAR mirror re-stamps every
+             file on each sync, so there it only gains from the parallel fetch).
 
     The returned ``source`` is ``"atcf-nhc"`` / ``"atcf-jtwc"``; ``basin`` uses IBTrACS
     codes (``IO`` -> ``NI``). Winds are 1-minute (knots) for both agencies.
@@ -98,16 +152,25 @@ def active_storms(
         year = t_now.year
         base = UCAR_BDECKS.format(year=year)
         allowed = [b.lower() for b in (basins or ["io", "sh", "wp"])]
-    names = _list(base, r"(b[a-z]{2}\d{6}\.dat)", timeout)
-    frames = []
-    for fn in names:
+    listing = _list_mtimes(base, timeout)
+    stale_before = t_now - pd.Timedelta(hours=max_age_hours + 3)  # 3 h slack for clock skew
+    names = []
+    for fn in sorted(listing):
         code, cy, yr = fn[1:3], int(fn[3:5]), int(fn[5:9])
         if code not in allowed or yr != year or (cy >= 90 and not invests):
             continue
-        obs = best_track_frame(parse_atcf(_get(base + fn, timeout)))
-        if obs.empty or (t_now - obs["time"].max()) > pd.Timedelta(hours=max_age_hours):
-            continue
-        frames.append(obs)
+        mtime = listing[fn]
+        if pd.notna(mtime) and mtime < stale_before:
+            continue  # untouched since before the age cut, so its last fix is too
+        names.append(fn)
+
+    def fetch(fn):
+        return best_track_frame(parse_atcf(_get(base + fn, timeout)))
+
+    with ThreadPoolExecutor(max_workers=max(1, min(workers, len(names) or 1))) as ex:
+        results = list(ex.map(fetch, names))  # keeps the sorted order
+    cut = pd.Timedelta(hours=max_age_hours)
+    frames = [o for o in results if not o.empty and (t_now - o["time"].max()) <= cut]
     obs = pd.concat(frames, ignore_index=True) if frames else best_track_frame(parse_atcf(""))
     return BestTracks(
         observations=obs,
