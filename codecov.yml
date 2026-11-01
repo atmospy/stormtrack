@@ -17,5 +17,5 @@ comment:
 # coverage. plot.py needs cartopy (no py3.14 wheel, not in the test extra); it is
 # integration-tested by the docs build, which renders a real map.
 ignore:
-  - "src/imdtrack/cli.py"
-  - "src/imdtrack/plot.py"
+  - "src/stormtrack/cli.py"
+  - "src/stormtrack/plot.py"

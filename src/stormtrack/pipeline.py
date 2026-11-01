@@ -75,7 +75,7 @@ def build(
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
-        prog="imdtrack-build",
+        prog="stormtrack-build",
         description="Rebuild the committed dataset from the IMD workbook (CI pipeline).",
     )
     p.add_argument(

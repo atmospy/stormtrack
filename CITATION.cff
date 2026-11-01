@@ -1,18 +1,20 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
-title: "imdtrack: A Python library for the IMD North Indian Ocean cyclone best-track record"
+title: "stormtrack: Tropical-cyclone best tracks and forecasts in Python (IMD, IBTrACS, NHC/JTWC)"
 type: software
 authors:
   - family-names: Syed
     given-names: Hamid Ali
     orcid: "https://orcid.org/0000-0002-7188-2544"
-repository-code: "https://github.com/syedhamidali/imdtrack"
-url: "https://imdtrack.readthedocs.io/"
+repository-code: "https://github.com/atmospy/stormtrack"
+url: "https://stormtrack.readthedocs.io/"
 license: BSD-3-Clause
 keywords:
   - cyclone
   - best-track
   - IMD
+  - IBTrACS
+  - forecast verification
   - North Indian Ocean
   - meteorology
   - xarray
@@ -24,11 +26,11 @@ doi: 10.5281/zenodo.21301659
 # date or version) so citations stay uniform across releases.
 preferred-citation:
   type: software
-  title: "imdtrack: A Python library for the IMD North Indian Ocean cyclone best-track record"
+  title: "stormtrack: Tropical-cyclone best tracks and forecasts in Python (IMD, IBTrACS, NHC/JTWC)"
   authors:
     - family-names: Syed
       given-names: Hamid Ali
       orcid: "https://orcid.org/0000-0002-7188-2544"
   year: 2026
   doi: 10.5281/zenodo.21301659
-  url: "https://imdtrack.readthedocs.io/"
+  url: "https://stormtrack.readthedocs.io/"

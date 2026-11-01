@@ -1,6 +1,6 @@
 # User Guide
 
-`imdtrack` turns the India Meteorological Department (RSMC New Delhi) cyclone
+`stormtrack` turns the India Meteorological Department (RSMC New Delhi) cyclone
 best-track workbook into clean, analysis-ready tables — kept up to date
 automatically. Start with **Loading the data**, then the **Examples** for
 worked notebooks.

@@ -1,12 +1,12 @@
 # Staying up to date
 
-A [monthly GitHub Action](https://github.com/syedhamidali/imdtrack/blob/main/.github/workflows/update-dataset.yml)
+A [monthly GitHub Action](https://github.com/atmospy/stormtrack/blob/main/.github/workflows/update-dataset.yml)
 re-fetches the IMD workbook and, **only if it parses and passes validation**,
 updates the committed dataset — a broken upload can never overwrite the good
 published data. You normally don't have to do anything:
 
 ```python
-bt = imd.load(update=True)      # pulls the latest (cheap conditional GET)
+bt = st.load(update=True)      # pulls the latest (cheap conditional GET)
 ```
 
 ## How the pipeline works
@@ -23,11 +23,11 @@ bt = imd.load(update=True)      # pulls the latest (cheap conditional GET)
 ## Running the pipeline yourself
 
 ```bash
-imdtrack build                     # fetch IMD → parse → validate → write ./data
-imdtrack info                      # summary of the current record
-imdtrack export tracks.parquet     # dump observations to CSV/Parquet
+stormtrack build                     # fetch IMD → parse → validate → write ./data
+stormtrack info                      # summary of the current record
+stormtrack export tracks.parquet     # dump observations to CSV/Parquet
 ```
 
 Because the dataset is fetched from GitHub at runtime (not bundled in the
-package), you always get the latest data via `imd.load(update=True)` **without
+package), you always get the latest data via `st.load(update=True)` **without
 upgrading** the pip/conda package.

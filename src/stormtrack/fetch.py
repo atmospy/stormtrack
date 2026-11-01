@@ -28,10 +28,10 @@ DEFAULT_URL = (
 
 
 def default_cache_dir() -> Path:
-    root = os.environ.get("IMDTRACK_CACHE")
+    root = _repo.env("CACHE")
     if root:
         return Path(root)
-    return Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "imdtrack"
+    return Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "stormtrack"
 
 
 @dataclass

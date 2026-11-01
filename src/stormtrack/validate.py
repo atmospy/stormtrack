@@ -40,7 +40,7 @@ class ValidationError(Exception):
 def validate_completeness(frames: dict, positional_by_year: dict) -> None:
     """Assert the parser captured every fix the workbook contains.
 
-    ``positional_by_year`` comes from :func:`imdtrack.parse.count_positional_rows`
+    ``positional_by_year`` comes from :func:`stormtrack.parse.count_positional_rows`
     — an independent count of rows with a position and time. Every such row must
     appear as a parsed observation; if the parsed count falls short for any year,
     the parser dropped fixes (as the merged-cell and text-date bugs once did) and
@@ -130,7 +130,7 @@ def validate_frames(frames: dict) -> None:
 def validate_against_previous(frames: dict, previous) -> None:
     """Guard against silent shrinkage versus the currently-published manifest.
 
-    ``previous`` is a :class:`imdtrack.store.Manifest` (or ``None`` to skip).
+    ``previous`` is a :class:`stormtrack.store.Manifest` (or ``None`` to skip).
     """
     if previous is None:
         return

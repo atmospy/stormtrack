@@ -1,16 +1,16 @@
 """Source-agnostic cyclone analysis for the IMD record and IBTrACS.
 
-Every function takes either a :class:`~imdtrack.BestTracks` or a bare
+Every function takes either a :class:`~stormtrack.BestTracks` or a bare
 observations ``DataFrame`` with the columns ``storm_id, time, lat, lon, wind``
 (and ``year, basin, name, pressure`` where noted), so the same code runs on
-``imd.load()`` and ``imd.load_ibtracs()``. Wind is in knots; note that agencies
-average it over different periods (see :mod:`imdtrack.ibtracs`).
+``st.load()`` and ``st.load_ibtracs()``. Wind is in knots; note that agencies
+average it over different periods (see :mod:`stormtrack.ibtracs`).
 
->>> import imdtrack as imd
->>> bt = imd.load()
->>> imd.analysis.lifetime_max(bt).head()
->>> imd.analysis.rapid_intensification(bt)           # >= 30 kt in 24 h
->>> imd.analysis.annual_counts(bt)                   # storms per year by strength
+>>> import stormtrack as st
+>>> bt = st.load()
+>>> st.analysis.lifetime_max(bt).head()
+>>> st.analysis.rapid_intensification(bt)           # >= 30 kt in 24 h
+>>> st.analysis.annual_counts(bt)                   # storms per year by strength
 """
 
 from __future__ import annotations
