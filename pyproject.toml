@@ -3,14 +3,14 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "imdtrack"
+name = "stormtrack"
 dynamic = ["version"]
-description = "A Python library for the IMD RSMC New Delhi North Indian Ocean cyclone best-track record, kept up to date automatically."
+description = "Tropical-cyclone best tracks and forecasts in Python: the IMD RSMC New Delhi record, IBTrACS, and real-time NHC/JTWC, with analysis and verification tools."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "BSD-3-Clause" }
 authors = [{ name = "Hamid Ali Syed" }]
-keywords = ["cyclone", "best-track", "IMD", "meteorology", "xarray", "pandas", "north-indian-ocean"]
+keywords = ["cyclone", "best-track", "IMD", "IBTrACS", "forecast", "meteorology", "xarray", "pandas", "north-indian-ocean"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -31,7 +31,7 @@ dependencies = [
 xarray = ["xarray>=2022.3", "numpy>=1.21"]
 # Parsing the raw IMD workbook (the update pipeline) needs openpyxl.
 pipeline = ["openpyxl>=3.0"]
-# Cartopy map plotting (imdtrack.plot). No 3.14 wheel yet, so it stays optional.
+# Cartopy map plotting (stormtrack.plot). No 3.14 wheel yet, so it stays optional.
 plot = ["cartopy>=0.21", "matplotlib>=3.6"]
 lint = ["black>=24.0", "ruff>=0.5"]
 docs = [
@@ -55,7 +55,7 @@ dev = [
 ]
 
 [project.scripts]
-imdtrack = "imdtrack.cli:main"
+stormtrack = "stormtrack.cli:main"
 
 [project.urls]
 Homepage = "https://rsmcnewdelhi.imd.gov.in/"
@@ -65,10 +65,10 @@ Homepage = "https://rsmcnewdelhi.imd.gov.in/"
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/imdtrack/_version.py"
+version-file = "src/stormtrack/_version.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/imdtrack"]
+packages = ["src/stormtrack"]
 
 [tool.black]
 line-length = 100
@@ -92,7 +92,7 @@ testpaths = ["tests"]
 addopts = "-q"
 
 [tool.coverage.run]
-source = ["imdtrack"]
+source = ["stormtrack"]
 branch = true
 
 [tool.coverage.report]

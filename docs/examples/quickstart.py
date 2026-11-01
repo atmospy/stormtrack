@@ -20,9 +20,9 @@
 # built, so every output below is real.
 
 # %%
-import imdtrack as imd
+import stormtrack as st
 
-bt = imd.load()
+bt = st.load()
 bt
 
 # %% [markdown]
@@ -44,18 +44,18 @@ bt.storms.tail()
 # %% [markdown]
 # ## Plot a cyclone track
 #
-# The optional `[plot]` extra (`pip install imdtrack[plot]`) draws
+# The optional `[plot]` extra (`pip install stormtrack[plot]`) draws
 # publication-quality Cartopy maps — the track is coloured by **IMD category**,
 # with genesis/peak/end marked. Look storms up by id **or name**:
 
 # %%
-imd.plot_track(bt.storm("tauktae"), color="grade", annotate=True)
+st.plot_track(bt.storm("tauktae"), color="grade", annotate=True)
 
 # %% [markdown]
 # …or colour by wind speed instead (the title is generated from the storm):
 
 # %%
-imd.plot_track(bt.storm("2020-001"), color="wind")
+st.plot_track(bt.storm("2020-001"), color="wind")
 
 # %% [markdown]
 # ## The xarray Dataset
@@ -90,5 +90,5 @@ print(
 
 # %%
 # Drop the coordinate spikes and swap day/month-transposed dates back into order.
-clean = imd.load().clean(fix_dates=True)
+clean = st.load().clean(fix_dates=True)
 clean

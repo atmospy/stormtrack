@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
-title: "imdtrack: A Python library for the IMD North Indian Ocean cyclone best-track record"
+title: "stormtrack: Tropical-cyclone best tracks and forecasts in Python (IMD, IBTrACS, NHC/JTWC)"
 type: software
 authors:
   - family-names: Syed
@@ -13,6 +13,8 @@ keywords:
   - cyclone
   - best-track
   - IMD
+  - IBTrACS
+  - forecast verification
   - North Indian Ocean
   - meteorology
   - xarray
@@ -24,7 +26,7 @@ doi: 10.5281/zenodo.21301659
 # date or version) so citations stay uniform across releases.
 preferred-citation:
   type: software
-  title: "imdtrack: A Python library for the IMD North Indian Ocean cyclone best-track record"
+  title: "stormtrack: Tropical-cyclone best tracks and forecasts in Python (IMD, IBTrACS, NHC/JTWC)"
   authors:
     - family-names: Syed
       given-names: Hamid Ali

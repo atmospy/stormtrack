@@ -15,15 +15,15 @@
 # %% [markdown]
 # # Track plotting gallery
 #
-# The optional `[plot]` extra (`pip install imdtrack[plot]`) adds Cartopy maps
-# via `imd.plot_track` (one storm) and `imd.plot_tracks` (many). Tracks are drawn
+# The optional `[plot]` extra (`pip install stormtrack[plot]`) adds Cartopy maps
+# via `st.plot_track` (one storm) and `st.plot_tracks` (many). Tracks are drawn
 # as intensity-coloured lines over a clean basemap — tropycal-style, but using
 # **IMD grades**. Everything below runs on the committed dataset.
 
 # %%
-import imdtrack as imd
+import stormtrack as st
 
-bt = imd.load().clean(fix_dates=True)
+bt = st.load().clean(fix_dates=True)
 
 # %% [markdown]
 # ## A single track, coloured by IMD category
@@ -33,7 +33,7 @@ bt = imd.load().clean(fix_dates=True)
 # them.
 
 # %%
-imd.plot_track(bt.storm("tauktae"), color="grade", annotate=True)
+st.plot_track(bt.storm("tauktae"), color="grade", annotate=True)
 
 # %% [markdown]
 # ## …or coloured by wind speed
@@ -44,7 +44,7 @@ imd.plot_track(bt.storm("tauktae"), color="grade", annotate=True)
 
 # %%
 strongest = bt.storms.loc[bt.storms["max_wind"].idxmax(), "storm_id"]
-imd.plot_track(
+st.plot_track(
     bt.storm(strongest),
     color="wind",
     cmap="turbo",
@@ -59,15 +59,13 @@ imd.plot_track(
 # vs Arabian Sea) …
 
 # %%
-imd.plot_tracks(
-    bt.observations, color="basin", title="North Indian Ocean best tracks, 1982–present"
-)
+st.plot_tracks(bt.observations, color="basin", title="North Indian Ocean best tracks, 1982–present")
 
 # %% [markdown]
 # ## … or by each storm's peak intensity
 
 # %%
-imd.plot_tracks(bt.observations, color="grade", title="Tracks by peak IMD grade")
+st.plot_tracks(bt.observations, color="grade", title="Tracks by peak IMD grade")
 
 # %% [markdown]
 # Both functions accept an existing Cartopy `ax` (pass `ax=...`) and an `extent`

@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import imdtrack as imd
-from imdtrack import analysis as A
-from imdtrack import ibtracs as ib
+import stormtrack as st
+from stormtrack import analysis as A
+from stormtrack import ibtracs as ib
 
 COLS = [
     "SID", "SEASON", "NUMBER", "BASIN", "SUBBASIN", "NAME", "ISO_TIME", "NATURE", "LAT", "LON",
@@ -49,7 +49,7 @@ def csv(tmp_path):
 
 
 def test_load_csv_tidy_schema(csv):
-    bt = imd.load_ibtracs(path=csv)
+    bt = st.load_ibtracs(path=csv)
     assert bt.source == "ibtracs" and "[ibtracs]" in repr(bt)
     obs = bt.observations
     assert {"storm_id", "year", "basin", "name", "time", "lat", "lon", "wind", "pressure",
@@ -61,11 +61,11 @@ def test_load_csv_tidy_schema(csv):
 
 
 def test_basin_year_filters(csv):
-    assert set(imd.load_ibtracs(path=csv, basin="NI").storms["basin"]) == {"NI"}
-    assert imd.load_ibtracs(path=csv, since=2021).observations.empty
-    assert imd.load_ibtracs(path=csv, until=2019).observations.empty
+    assert set(st.load_ibtracs(path=csv, basin="NI").storms["basin"]) == {"NI"}
+    assert st.load_ibtracs(path=csv, since=2021).observations.empty
+    assert st.load_ibtracs(path=csv, until=2019).observations.empty
     with pytest.raises(ValueError):
-        imd.load_ibtracs(path=csv, basin="XX")
+        st.load_ibtracs(path=csv, basin="XX")
 
 
 def test_wind_falls_back_to_usa(tmp_path):
@@ -74,7 +74,7 @@ def test_wind_falls_back_to_usa(tmp_path):
     df.loc[1, "WMO_WIND"] = np.nan  # first real row has no WMO wind
     p = tmp_path / "x.csv"
     df.to_csv(p, index=False)
-    obs = imd.load_ibtracs(path=p).observations
+    obs = st.load_ibtracs(path=p).observations
     assert obs["wind"].tolist() == [35.0, 40.0]  # USA = wmo + 5 when WMO missing
     assert obs["wind_agency"].tolist() == ["usa", "wmo"]
 
@@ -90,23 +90,23 @@ def test_build_publish_and_load_roundtrip(csv, tmp_path, monkeypatch):
     assert not changed2  # same content hash -> no rewrite
     assert ib.build_ibtracs(data, force=True)[0]
 
-    monkeypatch.setenv("IMDTRACK_DATA_DIR", str(data))
-    bt = imd.load_ibtracs()
+    monkeypatch.setenv("STORMTRACK_DATA_DIR", str(data))
+    bt = st.load_ibtracs()
     assert bt.source == "ibtracs" and bt.observations["grade"].cat.ordered
     assert bt.sha256 == m.source_sha256
     with pytest.raises(ValueError):
-        imd.load_ibtracs(basin="WP")
+        st.load_ibtracs(basin="WP")
 
 
 def test_validation_rejects_bad_data(csv):
-    bt = imd.load_ibtracs(path=csv, basin="NI")
+    bt = st.load_ibtracs(path=csv, basin="NI")
     with pytest.raises(ValueError, match="storms"):
         ib._validate_published(bt)  # fixture has far fewer than 1500 storms
 
 
 def test_to_xarray_ibtracs(csv):
     pytest.importorskip("xarray")
-    ds = imd.load_ibtracs(path=csv).to_xarray()
+    ds = st.load_ibtracs(path=csv).to_xarray()
     assert "usa_wind" in ds and "IBTrACS" in ds.attrs["title"]
 
 
@@ -174,7 +174,7 @@ def test_match_controls_and_windows_and_bootstrap():
 
 
 def test_compare_tracks_pairs_by_track(csv):
-    ibt = imd.load_ibtracs(path=csv)
+    ibt = st.load_ibtracs(path=csv)
     t = pd.date_range("2020-05-16", periods=7, freq="3h")
     imd_obs = pd.DataFrame({
         "storm_id": "2020-001", "name": "AMPHAN", "time": t,
@@ -182,15 +182,15 @@ def test_compare_tracks_pairs_by_track(csv):
         "lon": [87.0 - 0.2 * i for i in range(7)],
         "wind": [25, 30, 45, 80, 130, 140, 100], "pressure": [975.0] * 7,
     })  # fmt: skip
-    bt = imd.BestTracks(imd_obs, pd.DataFrame(), pd.DataFrame())
-    c = imd.compare_tracks(bt, ibt)
+    bt = st.BestTracks(imd_obs, pd.DataFrame(), pd.DataFrame())
+    c = st.compare_tracks(bt, ibt)
     assert len(c.matches) == 1 and c.matches["storm_id_b"].iloc[0] == "2020136N10087"
     assert c.fixes["pos_err_km"].max() < 10
     s = c.summary()
     assert s.loc["wind (kt)", "bias"] == pytest.approx(5.0)  # JTWC fixture = IMD + 5
-    assert imd.compare_tracks(bt, ibt, ib_wind="wmo").summary().loc["wind (kt)", "bias"] == 0
-    scaled = imd.compare_tracks(bt, ibt, ib_wind_scale=0.0).summary()
+    assert st.compare_tracks(bt, ibt, ib_wind="wmo").summary().loc["wind (kt)", "bias"] == 0
+    scaled = st.compare_tracks(bt, ibt, ib_wind_scale=0.0).summary()
     assert scaled.loc["wind (kt)", "bias"] < 0
     with pytest.raises(ValueError):
-        imd.compare_tracks(bt, ibt, ib_wind="nope")
+        st.compare_tracks(bt, ibt, ib_wind="nope")
     assert "1 matched" in repr(c)

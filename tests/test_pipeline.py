@@ -8,9 +8,9 @@ import openpyxl
 import pandas as pd
 import pytest
 
-from imdtrack import store, validate
-from imdtrack.parse import parse_workbook
-from imdtrack.pipeline import build
+from stormtrack import store, validate
+from stormtrack.parse import parse_workbook
+from stormtrack.pipeline import build
 
 HEADER_14 = [
     "Serial Number of system during year",
@@ -139,8 +139,8 @@ def test_validate_against_previous_rejects_shrink(tmp_path):
 
 
 def _patch_fetch(monkeypatch, wb_path, sha):
-    from imdtrack import fetch as _fetch
-    from imdtrack import pipeline
+    from stormtrack import fetch as _fetch
+    from stormtrack import pipeline
 
     def fake_fetch_workbook(url, cache_dir=None, force=False, timeout=120.0):
         return _fetch.FetchResult(path=wb_path, changed=True, sha256=sha, from_cache=False)
@@ -196,7 +196,7 @@ def test_validate_completeness_rejects_a_surplus():
     import pandas as pd
     import pytest
 
-    from imdtrack import validate
+    from stormtrack import validate
 
     frames = {"observations": pd.DataFrame({"year": [2020] * 5})}
     with pytest.raises(validate.ValidationError, match="more fix"):
@@ -206,7 +206,7 @@ def test_validate_completeness_rejects_a_surplus():
 def test_validate_completeness_accepts_an_exact_match():
     import pandas as pd
 
-    from imdtrack import validate
+    from stormtrack import validate
 
     frames = {"observations": pd.DataFrame({"year": [2020] * 3})}
     validate.validate_completeness(frames, {2020: 3})  # must not raise

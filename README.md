@@ -1,4 +1,4 @@
-# imdtrack
+# stormtrack
 
 [![CI](https://github.com/syedhamidali/imdtrack/actions/workflows/ci.yml/badge.svg)](https://github.com/syedhamidali/imdtrack/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/syedhamidali/imdtrack/branch/main/graph/badge.svg)](https://codecov.io/gh/syedhamidali/imdtrack)
@@ -9,15 +9,18 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21301659.svg)](https://doi.org/10.5281/zenodo.21301659)
 
-The [India Meteorological Department (RSMC New Delhi)](https://rsmcnewdelhi.imd.gov.in/)
-**cyclone best-track record** — every depression and cyclonic storm in the North
-Indian Ocean (Bay of Bengal & Arabian Sea) since 1982 — as a tidy **pandas
-DataFrame** or a CF-style **xarray Dataset**, kept up to date automatically.
+**Tropical-cyclone best tracks and forecasts in Python.** `stormtrack` serves the
+[India Meteorological Department (RSMC New Delhi)](https://rsmcnewdelhi.imd.gov.in/)
+**best-track record** — every depression and cyclonic storm in the North Indian
+Ocean since 1982 — and [IBTrACS](https://www.ncei.noaa.gov/products/international-best-track-archive)
+in one schema, as tidy **pandas DataFrames** or CF-style **xarray Datasets**, kept up
+to date automatically. It adds cross-dataset analysis and comparison, real-time NHC/JTWC
+storms and forecasts, and forecast verification.
 
-IMD publishes the record as a single, hand-maintained Excel workbook. `imdtrack`
+IMD publishes its record as a single, hand-maintained Excel workbook; `stormtrack`
 turns it into clean, analysis-ready tables. The parsed dataset is committed to
 this repo (under [`data/`](data/)) and refreshed by a monthly GitHub Action, so
-`imd.load()` just downloads the pre-parsed data — no Excel parsing on your side.
+`st.load()` just downloads the pre-parsed data — no Excel parsing on your side.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/syedhamidali/imdtrack/main/docs/_static/all_tracks_grade.png"
@@ -33,10 +36,10 @@ intensity grade. Two lines of code (below).</em></p>
 **pip** (from [PyPI](https://pypi.org/project/imdtrack/)):
 
 ```bash
-pip install imdtrack            # core: pandas + pyarrow (reads the published parquet)
-pip install imdtrack[xarray]    # + xarray/numpy for .to_xarray()
-pip install imdtrack[plot]      # + cartopy/matplotlib for map plotting
-pip install imdtrack[all]       # xarray + numpy + openpyxl
+pip install stormtrack            # core: pandas + pyarrow (reads the published parquet)
+pip install stormtrack[xarray]    # + xarray/numpy for .to_xarray()
+pip install stormtrack[plot]      # + cartopy/matplotlib for map plotting
+pip install stormtrack[all]       # xarray + numpy + openpyxl
 ```
 
 **conda / mamba / micromamba** (from [conda-forge](https://anaconda.org/conda-forge/imdtrack)) — create a
@@ -45,16 +48,16 @@ across the whole conda family; `conda` ships with Anaconda/Miniconda, while
 `mamba`/`micromamba` are faster drop-in replacements:
 
 ```bash
-# create a new environment named "imd" with imdtrack in it, then activate it
-conda create -n imd -c conda-forge imdtrack
+# create a new environment named "imd" with stormtrack in it, then activate it
+conda create -n imd -c conda-forge stormtrack
 conda activate imd
 
 # — or, using mamba / micromamba (same flags) —
-mamba create -n imd -c conda-forge imdtrack        # mamba activate imd
-micromamba create -n imd -c conda-forge imdtrack   # micromamba activate imd
+mamba create -n imd -c conda-forge stormtrack        # mamba activate imd
+micromamba create -n imd -c conda-forge stormtrack   # micromamba activate imd
 
 # add it to an environment you already have active
-conda install -c conda-forge imdtrack              # or: mamba / micromamba install ...
+conda install -c conda-forge stormtrack              # or: mamba / micromamba install ...
 ```
 
 The conda-forge build **bundles a prebuilt cartopy**, so map plotting works out of
@@ -63,15 +66,15 @@ the box — no compiler, no GEOS/PROJ, and no Python-version limit.
 **uv** (from [PyPI](https://pypi.org/project/imdtrack/)):
 
 ```bash
-uv add imdtrack                 # into a uv project  (uv add "imdtrack[plot]" for an extra)
-uv pip install imdtrack         # into the active environment
+uv add stormtrack                 # into a uv project  (uv add "stormtrack[plot]" for an extra)
+uv pip install stormtrack         # into the active environment
 ```
 
 | Extra | Adds | For |
 |---|---|---|
 | *(none)* | pandas, pyarrow | loading the data as DataFrames |
 | `xarray` | xarray, numpy | `bt.to_xarray()` |
-| `plot` | cartopy, matplotlib | `imd.plot_track()` map plots |
+| `plot` | cartopy, matplotlib | `st.plot_track()` map plots |
 | `pipeline` | openpyxl | parsing the IMD workbook yourself (`source="imd"`) |
 
 > With **pip/uv**, `cartopy` has no Python 3.14 wheel yet, so the `[plot]` extra
@@ -81,13 +84,13 @@ uv pip install imdtrack         # into the active environment
 ## Usage
 
 ```python
-import imdtrack as imd
+import stormtrack as st
 
-bt = imd.load()                 # pre-parsed dataset from GitHub (cached)
+bt = st.load()                 # pre-parsed dataset from GitHub (cached)
 df = bt.observations            # tidy DataFrame: one row per 3-hourly fix
 ds = bt.to_xarray()             # (storm, step) xarray.Dataset
 
-bt = imd.load(update=True)      # re-download only if the repo published new data
+bt = st.load(update=True)      # re-download only if the repo published new data
 
 bt.storm("2020-001")            # one storm's track (AMPHAN)
 bt.storms                       # one row per storm (peak grade, max wind, ...)
@@ -134,11 +137,11 @@ maps, coloured by IMD intensity grade. Plot **every track at once** — by peak
 grade (the figure above) or by sub-basin:
 
 ```python
-import imdtrack as imd
+import stormtrack as st
 
-bt = imd.load().clean()                        # QC-clean the whole record
-imd.plot_tracks(bt.observations, color="grade")   # colour by peak intensity
-imd.plot_tracks(bt.observations, color="basin")   # Bay of Bengal vs Arabian Sea
+bt = st.load().clean()                        # QC-clean the whole record
+st.plot_tracks(bt.observations, color="grade")   # colour by peak intensity
+st.plot_tracks(bt.observations, color="basin")   # Bay of Bengal vs Arabian Sea
 ```
 
 <p align="center">
@@ -149,7 +152,7 @@ imd.plot_tracks(bt.observations, color="basin")   # Bay of Bengal vs Arabian Sea
 Or a **single storm**, coloured by grade with genesis / peak / end marked:
 
 ```python
-imd.plot_track(bt.storm("tauktae"), color="grade")   # or any storm_id / name
+st.plot_track(bt.storm("tauktae"), color="grade")   # or any storm_id / name
 ```
 
 <p align="center">
@@ -166,41 +169,41 @@ it is committed to the repo ([`data/ibtracs/`](data/ibtracs/), ~1 MB) and refres
 the monthly Action, so there is no CSV parsing on your side.
 
 ```python
-import imdtrack as imd
+import stormtrack as st
 
-imd_bt = imd.load()                      # IMD RSMC New Delhi, 1982-
-ib_bt = imd.load_ibtracs()               # IBTrACS North Indian Ocean, 1842-
-ib_wp = imd.load_ibtracs(basin="WP", source="ncei")   # any other basin, straight from NOAA
+imd_bt = st.load()                      # IMD RSMC New Delhi, 1982-
+ib_bt = st.load_ibtracs()               # IBTrACS North Indian Ocean, 1842-
+ib_wp = st.load_ibtracs(basin="WP", source="ncei")   # any other basin, straight from NOAA
 
-A = imd.analysis                         # works on either dataset
+A = st.analysis                         # works on either dataset
 A.lifetime_max(ib_bt)                    # peak intensity, time and place per storm
 A.rapid_intensification(imd_bt)          # >= 30 kt / 24 h events
 A.annual_counts(ib_bt)                   # storms per year by strength
 A.ace(ib_bt)                             # accumulated cyclone energy
 A.match_controls(events, pool)           # matched control storms for composites
 
-cmp = imd.compare_tracks(imd_bt, ib_bt)  # pair storms by track, compare every common fix
+cmp = st.compare_tracks(imd_bt, ib_bt)  # pair storms by track, compare every common fix
 cmp.summary()                            # position / wind / pressure agreement
 ```
 
 `compare_tracks(..., ib_wind="usa")` compares IMD with JTWC's independent estimate
 (1-min wind, so not like-for-like with IMD's 3-min; the WMO guidance only converts 1-min ↔ 10-min, see `analysis.convert_vmax`), while `ib_wind="wmo"`
 checks that IBTrACS reproduces IMD's own submission. From the shell:
-`imdtrack compare --out diffs.csv`.
+`stormtrack compare --out diffs.csv`.
 
 ## Real-time storms, forecast verification and cones
 
-NHC and JTWC publish ATCF decks; `imdtrack.realtime` reads them into the same schema,
-and `imdtrack.verification` scores any forecast against any best track — e.g. an NHC or
+NHC and JTWC publish ATCF decks; `stormtrack.realtime` reads them into the same schema,
+and `stormtrack.verification` scores any forecast against any best track — e.g. an NHC or
 JTWC forecast against the IMD record. (IMD, JMA, BoM and Météo-France offer no
 machine-readable forecast feed, so their forecasts are not supported.)
 
 ```python
-io = imd.realtime.active_storms("jtwc", basins=["io"])   # live JTWC North Indian Ocean
-gd = imd.realtime.get_guidance("AL042026")                # NHC a-deck: every model & cycle
-err = imd.verification.forecast_errors(gd, best_track)    # track / wind errors by lead time
-radii = imd.verification.error_radii(err, pct=67)         # NHC's 67 % cone-circle definition
-imd.plot_forecast(fc, best=track, radii_km=radii)         # forecast + cone map
+io = st.realtime.active_storms("jtwc", basins=["io"])   # live JTWC North Indian Ocean
+gd = st.realtime.get_guidance("AL042026")                # NHC a-deck: every model & cycle
+err = st.verification.forecast_errors(gd, best_track)    # track / wind errors by lead time
+radii = st.verification.error_radii(err, pct=67)         # NHC's 67 % cone-circle definition
+st.plot_forecast(fc, best=track, radii_km=radii)         # forecast + cone map
 ```
 
 Methods and definitions are referenced to the literature in
@@ -211,7 +214,7 @@ Methods and definitions are referenced to the literature in
 A [monthly GitHub Action](.github/workflows/update-dataset.yml) re-fetches the
 IMD workbook (and IBTrACS) and, only if it parses and passes validation, updates `data/` — a
 broken upload can never overwrite the good published data. You normally don't
-have to do anything; `imd.load(update=True)` pulls the latest.
+have to do anything; `st.load(update=True)` pulls the latest.
 
 ## Data quality
 
@@ -225,7 +228,7 @@ source values are never altered:
   May 1–3 were stored as "01/05, 02/05, 03/05" (Jan/Feb/Mar 5).
 
 ```python
-bt = imd.load()
+bt = st.load()
 bt.observations.query("pos_suspect or date_suspect")   # inspect flagged fixes
 bt.clean()                        # drop position spikes (or clean(how="mask"))
 bt.clean(fix_dates=True)          # also swap day/month back and re-order the track
@@ -244,10 +247,10 @@ corruption that is left as-is (visible as an implausibly long `start_time`–`en
 
 ## Citation
 
-Please cite `imdtrack` via its Zenodo **Concept DOI** — stable across releases,
+Please cite `stormtrack` via its Zenodo **Concept DOI** — stable across releases,
 always resolving to the latest version:
 
-> Syed, H. A. (2026). *imdtrack: A Python library for the IMD North Indian Ocean
+> Syed, H. A. (2026). *stormtrack: A Python library for the IMD North Indian Ocean
 > cyclone best-track record.* https://doi.org/10.5281/zenodo.21301659
 
 GitHub's "Cite this repository" button reads [`CITATION.cff`](CITATION.cff).

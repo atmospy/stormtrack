@@ -1,5 +1,5 @@
 .DS_Store
-src/imdtrack/_version.py
+src/stormtrack/_version.py
 __pycache__/
 *.py[cod]
 *.egg-info/

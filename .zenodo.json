@@ -1,6 +1,6 @@
 {
-  "title": "imdtrack: A Python library for the IMD North Indian Ocean cyclone best-track record",
-  "description": "A Python library that serves the India Meteorological Department (RSMC New Delhi) cyclone best-track record as tidy pandas DataFrames and CF-style xarray Datasets. The parsed dataset is kept up to date automatically.",
+  "title": "stormtrack: Tropical-cyclone best tracks and forecasts in Python (IMD, IBTrACS, NHC/JTWC)",
+  "description": "A Python library that serves tropical-cyclone best tracks (the India Meteorological Department RSMC New Delhi record and IBTrACS) and real-time NHC/JTWC forecasts as tidy pandas DataFrames and CF-style xarray Datasets, with analysis, comparison and forecast-verification tools. The parsed datasets are kept up to date automatically.",
   "upload_type": "software",
   "access_right": "open",
   "license": "BSD-3-Clause",
@@ -11,6 +11,7 @@
     "cyclone",
     "best-track",
     "IMD",
+    "IBTrACS",
     "North Indian Ocean",
     "meteorology",
     "xarray",

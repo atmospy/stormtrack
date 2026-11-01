@@ -1,7 +1,7 @@
 """Tests for the end-user load paths that don't hit the network.
 
-`imd.load()` normally downloads the published dataset from GitHub. Setting
-``IMDTRACK_DATA_DIR`` makes it read a local committed dataset instead — the same
+`st.load()` normally downloads the published dataset from GitHub. Setting
+``STORMTRACK_DATA_DIR`` makes it read a local committed dataset instead — the same
 mechanism the docs build and offline users rely on. These tests exercise that
 path end to end without any HTTP.
 """
@@ -11,9 +11,9 @@ from datetime import datetime
 import openpyxl
 import pytest
 
-import imdtrack as imd
-from imdtrack import store
-from imdtrack.parse import parse_workbook
+import stormtrack as st
+from stormtrack import store
+from stormtrack.parse import parse_workbook
 
 HEADER_14 = [
     "Serial Number of system during year",
@@ -57,11 +57,11 @@ def _write_dataset(tmp_path):
 
 def test_load_from_local_data_dir(tmp_path, monkeypatch):
     data_dir = _write_dataset(tmp_path)
-    monkeypatch.setenv("IMDTRACK_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("STORMTRACK_DATA_DIR", str(data_dir))
     # Point the cache elsewhere so nothing leaks in from a real user cache.
-    monkeypatch.setenv("IMDTRACK_CACHE", str(tmp_path / "cache"))
+    monkeypatch.setenv("STORMTRACK_CACHE", str(tmp_path / "cache"))
 
-    bt = imd.load()  # default source="github", but IMDTRACK_DATA_DIR short-circuits it
+    bt = st.load()  # default source="github", but STORMTRACK_DATA_DIR short-circuits it
 
     assert len(bt.storms) == 1
     assert bt.storms["storm_id"].iloc[0] == "2020-001"
@@ -73,9 +73,9 @@ def test_load_from_local_data_dir(tmp_path, monkeypatch):
 
 def test_storm_lookup_by_id_and_name(tmp_path, monkeypatch):
     data_dir = _write_dataset(tmp_path)  # one storm, 2020-001, named AMPHAN
-    monkeypatch.setenv("IMDTRACK_DATA_DIR", str(data_dir))
-    monkeypatch.setenv("IMDTRACK_CACHE", str(tmp_path / "cache"))
-    bt = imd.load()
+    monkeypatch.setenv("STORMTRACK_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("STORMTRACK_CACHE", str(tmp_path / "cache"))
+    bt = st.load()
 
     by_id = bt.storm("2020-001")
     by_name = bt.storm("amphan")  # case-insensitive name lookup
@@ -88,9 +88,22 @@ def test_storm_lookup_by_id_and_name(tmp_path, monkeypatch):
 
 def test_load_local_to_xarray(tmp_path, monkeypatch):
     data_dir = _write_dataset(tmp_path)
-    monkeypatch.setenv("IMDTRACK_DATA_DIR", str(data_dir))
-    monkeypatch.setenv("IMDTRACK_CACHE", str(tmp_path / "cache"))
+    monkeypatch.setenv("STORMTRACK_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("STORMTRACK_CACHE", str(tmp_path / "cache"))
 
-    ds = imd.load().to_xarray()
+    ds = st.load().to_xarray()
     assert dict(ds.sizes) == {"storm": 1, "step": 3}
     assert float(ds.sel(storm="2020-001")["wind"].max()) == 130.0
+
+
+def test_legacy_imdtrack_env_vars_still_work(tmp_path, monkeypatch):
+    """The pre-rename IMDTRACK_* variables keep working; STORMTRACK_* takes precedence."""
+    data_dir = _write_dataset(tmp_path)
+    monkeypatch.delenv("STORMTRACK_DATA_DIR", raising=False)
+    monkeypatch.setenv("IMDTRACK_DATA_DIR", str(data_dir))
+    assert len(st.load().storms) == 1
+    monkeypatch.setenv(
+        "STORMTRACK_DATA_DIR", str(tmp_path / "nowhere")
+    )  # wins over the legacy name
+    with pytest.raises(FileNotFoundError):
+        st.load()

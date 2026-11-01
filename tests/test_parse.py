@@ -10,8 +10,8 @@ from datetime import datetime
 import openpyxl
 import pytest
 
-from imdtrack import _schema as S
-from imdtrack.parse import parse_workbook
+from stormtrack import _schema as S
+from stormtrack.parse import parse_workbook
 
 HEADER_14 = [
     "Serial Number of system during year",
@@ -518,7 +518,7 @@ def test_row_without_intensity_or_position_is_not_a_fix(tmp_path):
 def test_counter_matches_the_parser_exactly(tmp_path):
     """``count_positional_rows`` is the completeness guard: it must count the
     same rows the parser emits, so a shortfall or surplus is a real bug."""
-    from imdtrack.parse import count_positional_rows
+    from stormtrack.parse import count_positional_rows
 
     d = datetime(2013, 11, 11)
     rows = [
@@ -563,7 +563,7 @@ def test_non_numeric_serial_is_ignored(tmp_path):
 
 
 def test_count_positional_rows_skips_a_sheet_without_a_header(tmp_path):
-    from imdtrack.parse import count_positional_rows
+    from stormtrack.parse import count_positional_rows
 
     d = datetime(2020, 5, 16)
     good = [HEADER_14, _fix(1, "BOB", "AMPHAN", d, "0000", 10.4, 87.0)]

@@ -2,16 +2,16 @@
 
 Inspired by `tropycal <https://tropycal.github.io/>`_ but coloured by **IMD grade**
 rather than Saffir–Simpson. Cartopy/matplotlib are imported lazily inside the
-functions, so ``import imdtrack`` works even without them — calling a plot then
-raises a clear ``pip install imdtrack[plot]`` message.
+functions, so ``import stormtrack`` works even without them — calling a plot then
+raises a clear ``pip install stormtrack[plot]`` message.
 
 Examples
 --------
->>> import imdtrack as imd
->>> bt = imd.load()
->>> imd.plot_track(bt.storm("tauktae"), color="grade")      # by IMD category
->>> imd.plot_track(bt.storm("2020-001"), color="wind")      # by wind speed
->>> imd.plot_tracks(bt.observations, color="basin")         # every track
+>>> import stormtrack as st
+>>> bt = st.load()
+>>> st.plot_track(bt.storm("tauktae"), color="grade")      # by IMD category
+>>> st.plot_track(bt.storm("2020-001"), color="wind")      # by wind speed
+>>> st.plot_tracks(bt.observations, color="basin")         # every track
 """
 
 from __future__ import annotations
@@ -46,8 +46,8 @@ def _cartopy():
     except ImportError as exc:  # pragma: no cover - only hit without cartopy
         raise ImportError(
             "Map plotting needs cartopy and matplotlib. Install them with:\n"
-            "    pip install 'imdtrack[plot]'          # needs Python <= 3.13\n"
-            "    conda install -c conda-forge imdtrack  # bundles a prebuilt cartopy"
+            "    pip install 'stormtrack[plot]'          # needs Python <= 3.13\n"
+            "    conda install -c conda-forge stormtrack  # bundles a prebuilt cartopy"
         ) from exc
     return ccrs, cfeature, plt
 
@@ -400,7 +400,7 @@ def plot_forecast(
 
     Parameters
     ----------
-    forecast : an ATCF forecast frame (``imdtrack.realtime.get_forecast``).
+    forecast : an ATCF forecast frame (``stormtrack.realtime.get_forecast``).
     best : the storm's track so far (``bt.storm(...)`` or ``active_storms(...).storm(...)``),
            drawn as the observed (best) track, its dots coloured by intensity.
     radii_km : lead time (h) -> circle radius (km), e.g. ``verification.error_radii``;

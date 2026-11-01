@@ -1,6 +1,6 @@
 # References
 
-Primary sources for the formats, definitions and conventions used in `imdtrack`. Only
+Primary sources for the formats, definitions and conventions used in `stormtrack`. Only
 works that were consulted are listed.
 
 **Data and formats**

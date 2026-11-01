@@ -1,4 +1,4 @@
-# Contributing to imdtrack
+# Contributing to stormtrack
 
 Thanks for helping! Bug reports, fixes, and features are all welcome via
 [issues](https://github.com/syedhamidali/imdtrack/issues) and pull requests.

@@ -51,12 +51,12 @@ jobs:
       # no commit happens — the previous dataset stays in place.
       - name: Rebuild dataset from IMD
         run: |
-          imdtrack build --data-dir data \
+          stormtrack build --data-dir data \
             ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
 
       # Independent fail-safe: a bad IBTrACS file leaves data/ibtracs untouched.
       - name: Rebuild IBTrACS (North Indian Ocean) dataset
-        run: imdtrack build-ibtracs --data-dir data ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
+        run: stormtrack build-ibtracs --data-dir data ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
 
       - name: Commit and tag if the dataset changed
         id: commit

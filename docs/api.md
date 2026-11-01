@@ -1,20 +1,20 @@
 # API reference
 
 ```{eval-rst}
-.. currentmodule:: imdtrack
+.. currentmodule:: stormtrack
 ```
 
 ## Loading data
 
 ```{eval-rst}
-.. autofunction:: imdtrack.load
-.. autofunction:: imdtrack.update
+.. autofunction:: stormtrack.load
+.. autofunction:: stormtrack.update
 ```
 
 ## The `BestTracks` bundle
 
 ```{eval-rst}
-.. autoclass:: imdtrack.BestTracks
+.. autoclass:: stormtrack.BestTracks
    :members:
    :undoc-members:
 ```
@@ -22,33 +22,33 @@
 ## IBTrACS, analysis and comparison
 
 ```{eval-rst}
-.. autofunction:: imdtrack.load_ibtracs
-.. autofunction:: imdtrack.fetch_ibtracs
-.. autofunction:: imdtrack.build_ibtracs
-.. autofunction:: imdtrack.compare_tracks
-.. autoclass:: imdtrack.Comparison
+.. autofunction:: stormtrack.load_ibtracs
+.. autofunction:: stormtrack.fetch_ibtracs
+.. autofunction:: stormtrack.build_ibtracs
+.. autofunction:: stormtrack.compare_tracks
+.. autoclass:: stormtrack.Comparison
    :members:
-.. automodule:: imdtrack.analysis
+.. automodule:: stormtrack.analysis
    :members:
 ```
 
 ## Real-time data, verification and wind conversion
 
 ```{eval-rst}
-.. automodule:: imdtrack.realtime
+.. automodule:: stormtrack.realtime
    :members:
-.. automodule:: imdtrack.atcf
+.. automodule:: stormtrack.atcf
    :members:
-.. automodule:: imdtrack.verification
+.. automodule:: stormtrack.verification
    :members:
-.. autofunction:: imdtrack.plot_forecast
+.. autofunction:: stormtrack.plot_forecast
 ```
 
 ## Pipeline (rebuild from the IMD workbook)
 
 ```{eval-rst}
-.. autofunction:: imdtrack.build
-.. autofunction:: imdtrack.parse_workbook
-.. autofunction:: imdtrack.fetch_workbook
-.. autofunction:: imdtrack.fetch_data_from_repo
+.. autofunction:: stormtrack.build
+.. autofunction:: stormtrack.parse_workbook
+.. autofunction:: stormtrack.fetch_workbook
+.. autofunction:: stormtrack.fetch_data_from_repo
 ```
