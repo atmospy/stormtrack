@@ -1,22 +1,22 @@
 # IBTrACS & cross-dataset analysis
 
-`imdtrack` can load [IBTrACS](https://www.ncei.noaa.gov/products/international-best-track-archive)
+`stormtrack` can load [IBTrACS](https://www.ncei.noaa.gov/products/international-best-track-archive)
 into the same tidy schema as the IMD record, so analysis code is written once and
 runs on either dataset.
 
 ## Loading
 
 ```python
-import imdtrack as imd
+import stormtrack as st
 
-ib = imd.load_ibtracs()                          # published North Indian Ocean dataset
-ib = imd.load_ibtracs(since=1982, basin="NI")    # filter by season / genesis basin
-wp = imd.load_ibtracs(basin="WP", source="ncei") # other basins: download from NOAA/NCEI
-ib = imd.load_ibtracs(path="ibtracs.ALL.list.v04r01.csv", basin="NI")  # a local CSV
+ib = st.load_ibtracs()                          # published North Indian Ocean dataset
+ib = st.load_ibtracs(since=1982, basin="NI")    # filter by season / genesis basin
+wp = st.load_ibtracs(basin="WP", source="ncei") # other basins: download from NOAA/NCEI
+ib = st.load_ibtracs(path="ibtracs.ALL.list.v04r01.csv", basin="NI")  # a local CSV
 ```
 
 The NI dataset lives in the repo under `data/ibtracs/` (`observations.parquet`,
-`storms.parquet`, `manifest.json`). `imdtrack build-ibtracs` rebuilds it from NCEI:
+`storms.parquet`, `manifest.json`). `stormtrack build-ibtracs` rebuilds it from NCEI:
 the download is hashed, skipped if unchanged, validated, and only then written
 atomically. The monthly workflow runs it alongside the IMD build.
 
@@ -31,7 +31,7 @@ Agencies average wind over different periods (IMD 3-min, NHC/JTWC 1-min, JMA
 10-min winds (`analysis.convert_vmax`); there is none for 3-min. Compare intensities across agencies with care.
 ```
 
-## Analysis (`imdtrack.analysis`)
+## Analysis (`stormtrack.analysis`)
 
 | function | gives |
 |---|---|
@@ -50,7 +50,7 @@ example environmental response around storms with extreme cloud tops.
 ## Comparing IMD with IBTrACS
 
 ```python
-cmp = imd.compare_tracks(imd.load(), imd.load_ibtracs())
+cmp = st.compare_tracks(st.load(), st.load_ibtracs())
 cmp.matches      # one row per paired storm (ids, names, peak wind difference, timing)
 cmp.fixes        # every common fix: position error (km), wind and pressure differences
 cmp.summary()    # bias / MAE / RMSE / correlation

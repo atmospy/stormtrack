@@ -1,6 +1,6 @@
 # Data quality
 
-`imdtrack` mirrors the IMD workbook faithfully, including its occasional
+`stormtrack` mirrors the IMD workbook faithfully, including its occasional
 data-entry errors. Two conservative, **non-destructive** checks flag them — the
 source values are never altered:
 
@@ -11,13 +11,13 @@ source values are never altered:
   storm across months.
 
 ```python
-bt = imd.load()
+bt = st.load()
 bt.observations.query("pos_suspect or date_suspect")   # inspect flagged fixes
 ```
 
 ## Cleaning on demand
 
-{meth}`~imdtrack.BestTracks.clean` returns a cleaned copy — the source is left
+{meth}`~stormtrack.BestTracks.clean` returns a cleaned copy — the source is left
 untouched:
 
 ```python

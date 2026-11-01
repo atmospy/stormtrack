@@ -2,10 +2,10 @@
 
 import pandas as pd
 
-from imdtrack import BestTracks
-from imdtrack import _schema as S
-from imdtrack.parse import _summarize_storms
-from imdtrack.qc import flag_dates, flag_positions
+from stormtrack import BestTracks
+from stormtrack import _schema as S
+from stormtrack.parse import _summarize_storms
+from stormtrack.qc import flag_dates, flag_positions
 
 
 def _track(coords, sid="2020-001"):
@@ -134,7 +134,7 @@ def test_clean_fix_dates_reorders_chronologically():
 def test_resolve_dates_prefers_the_stored_reading_on_a_clean_track():
     from datetime import datetime
 
-    from imdtrack.qc import resolve_dates
+    from stormtrack.qc import resolve_dates
 
     dates = [datetime(2020, 5, 16)] * 3 + [datetime(2020, 5, 17)] * 2
     assert resolve_dates(dates, 2020) == dates
@@ -143,7 +143,7 @@ def test_resolve_dates_prefers_the_stored_reading_on_a_clean_track():
 def test_resolve_dates_fixes_a_transposed_block():
     from datetime import datetime
 
-    from imdtrack.qc import resolve_dates
+    from stormtrack.qc import resolve_dates
 
     # 30 Apr, then 1-2 May written month-first as 5 Jan / 5 Feb
     dates = [datetime(2008, 4, 30), datetime(2008, 1, 5), datetime(2008, 2, 5)]
@@ -157,7 +157,7 @@ def test_resolve_dates_fixes_a_transposed_block():
 def test_resolve_dates_gives_up_rather_than_guessing():
     from datetime import datetime
 
-    from imdtrack.qc import resolve_dates
+    from stormtrack.qc import resolve_dates
 
     # a date that recurs after another has intervened is not a simple keying
     # error, so the sequence is returned untouched
@@ -166,7 +166,7 @@ def test_resolve_dates_gives_up_rather_than_guessing():
 
 
 def test_resolve_dates_handles_an_empty_track():
-    from imdtrack.qc import resolve_dates
+    from stormtrack.qc import resolve_dates
 
     assert resolve_dates([], 2020) == []
 
@@ -176,7 +176,7 @@ def test_resolve_dates_leaves_a_long_gap_alone():
     so the sequence is returned untouched rather than forced."""
     from datetime import datetime
 
-    from imdtrack.qc import resolve_dates
+    from stormtrack.qc import resolve_dates
 
     dates = [datetime(2011, 6, 1), datetime(2011, 7, 20)]
     assert resolve_dates(dates, 2011) == dates
@@ -187,7 +187,7 @@ def test_resolve_dates_ignores_an_impossible_year_snap():
     is skipped rather than raising."""
     from datetime import datetime
 
-    from imdtrack.qc import resolve_dates
+    from stormtrack.qc import resolve_dates
 
     dates = [datetime(2020, 2, 29), datetime(2020, 3, 1)]
     assert resolve_dates(dates, 2019) == dates
@@ -196,7 +196,7 @@ def test_resolve_dates_ignores_an_impossible_year_snap():
 def test_flag_positions_without_the_required_columns():
     import pandas as pd
 
-    from imdtrack.qc import flag_positions
+    from stormtrack.qc import flag_positions
 
     out = flag_positions(pd.DataFrame({"storm_id": ["a"], "time": [pd.Timestamp("2020-01-01")]}))
     assert not out.any()
@@ -207,8 +207,8 @@ def test_clean_fix_dates_falls_back_for_legacy_datasets():
     correctable through the older median-based heuristic."""
     import pandas as pd
 
-    from imdtrack.core import BestTracks
-    from imdtrack.parse import _summarize_storms
+    from stormtrack.core import BestTracks
+    from stormtrack.parse import _summarize_storms
 
     times = [pd.Timestamp("2008-04-30 00:00")] * 3 + [pd.Timestamp("2008-01-05 00:00")]
     obs = pd.DataFrame(
@@ -242,8 +242,8 @@ def test_clean_fix_dates_uses_the_resolved_column(tmp_path):
 
     import openpyxl
 
-    from imdtrack.core import BestTracks
-    from imdtrack.parse import parse_workbook
+    from stormtrack.core import BestTracks
+    from stormtrack.parse import parse_workbook
 
     header = [
         "Serial Number of system during year",

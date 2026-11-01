@@ -1,17 +1,17 @@
-"""imdtrack - IMD RSMC New Delhi cyclone best-track data as pandas / xarray.
+"""stormtrack - IMD RSMC New Delhi cyclone best-track data as pandas / xarray.
 
 Quick start
 -----------
->>> import imdtrack as imd
->>> bt = imd.load()                 # download the pre-parsed dataset from GitHub
+>>> import stormtrack as st
+>>> bt = st.load()                 # download the pre-parsed dataset from GitHub
 >>> df = bt.observations            # tidy pandas DataFrame, one row per fix
 >>> ds = bt.to_xarray()             # (storm, step) xarray.Dataset
->>> bt = imd.load(update=True)      # re-fetch only if the repo published new data
->>> ib = imd.load_ibtracs()          # IBTrACS North Indian Ocean, same schema
->>> imd.compare_tracks(bt, ib)      # IMD vs IBTrACS, storm by storm
+>>> bt = st.load(update=True)      # re-fetch only if the repo published new data
+>>> ib = st.load_ibtracs()          # IBTrACS North Indian Ocean, same schema
+>>> st.compare_tracks(bt, ib)      # IMD vs IBTrACS, storm by storm
 
 The published dataset is rebuilt from the IMD workbook by a scheduled GitHub
-Action (see :mod:`imdtrack.pipeline`); ``load(source="imd")`` parses the raw
+Action (see :mod:`stormtrack.pipeline`); ``load(source="imd")`` parses the raw
 workbook directly instead.
 """
 
@@ -62,6 +62,6 @@ except ImportError:  # pragma: no cover  (source checkout without a build)
     from importlib.metadata import version as _pkg_version
 
     try:
-        __version__ = _pkg_version("imdtrack")
+        __version__ = _pkg_version("stormtrack")
     except PackageNotFoundError:
         __version__ = "0.0.0+unknown"

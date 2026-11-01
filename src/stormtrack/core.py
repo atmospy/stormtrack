@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
 import pandas as pd
 
+from . import _repo
 from . import fetch as _fetch
 from . import parse as _parse
 from .fetch import DEFAULT_URL
@@ -194,7 +194,7 @@ def load(
 def _load_from_github(update: bool, cache_dir: Path) -> BestTracks:
     """Load the pre-parsed dataset published in the GitHub repo.
 
-    If ``IMDTRACK_DATA_DIR`` is set, the committed dataset is read straight from
+    If ``STORMTRACK_DATA_DIR`` is set, the committed dataset is read straight from
     that local directory instead of the network — handy for offline use, tests,
     and building the docs against the in-repo ``data/``.
     """
@@ -202,7 +202,7 @@ def _load_from_github(update: bool, cache_dir: Path) -> BestTracks:
 
     from . import store
 
-    local = os.environ.get("IMDTRACK_DATA_DIR")
+    local = _repo.env("DATA_DIR")
     if local:
         frames = store.read_dataset(Path(local))
         manifest = store.read_manifest(Path(local))

@@ -2,9 +2,9 @@
 
 `IBTrACS <https://www.ncei.noaa.gov/products/international-best-track-archive>`_
 merges the best tracks of every agency worldwide. :func:`load_ibtracs` returns a
-:class:`~imdtrack.BestTracks` whose ``observations`` / ``storms`` frames use the
-same column names as ``imd.load()``, so every function in :mod:`imdtrack.analysis`
-and :mod:`imdtrack.plot` works on either dataset.
+:class:`~stormtrack.BestTracks` whose ``observations`` / ``storms`` frames use the
+same column names as ``st.load()``, so every function in :mod:`stormtrack.analysis`
+and :mod:`stormtrack.plot` works on either dataset.
 
 Wind speeds are in knots, but **averaging periods differ by agency**: ``wmo_wind``
 follows each basin's WMO agency in that agency's own convention (e.g. IMD 3-min,
@@ -100,7 +100,7 @@ def load_ibtracs(
     cache_dir: Optional[PathLike] = None,
     update: bool = False,
 ) -> BestTracks:
-    """Load IBTrACS as a :class:`~imdtrack.BestTracks` (``source="ibtracs"``).
+    """Load IBTrACS as a :class:`~stormtrack.BestTracks` (``source="ibtracs"``).
 
     Parameters
     ----------
@@ -117,7 +117,7 @@ def load_ibtracs(
     The ``storm_id`` is the IBTrACS ``SID``; ``year`` the season; ``basin`` the
     storm's genesis basin (constant per storm, so tracks stay whole across basin
     lines). For North Indian storms ``grade`` holds IMD's own grade as submitted
-    to IBTrACS, using the same ordered categories as ``imd.load()``.
+    to IBTrACS, using the same ordered categories as ``st.load()``.
     """
     if source not in ("github", "ncei"):
         raise ValueError("source must be 'github' or 'ncei'")
@@ -307,9 +307,9 @@ def _read_published_dir(d: Path) -> BestTracks:
 
 
 def _load_published(update: bool, cache_dir: Optional[PathLike]) -> BestTracks:
-    """Read the published NI dataset: ``$IMDTRACK_DATA_DIR/ibtracs`` if set, else
+    """Read the published NI dataset: ``$STORMTRACK_DATA_DIR/ibtracs`` if set, else
     the parquet files cached from the GitHub repo (re-fetched when ``update``)."""
-    local = os.environ.get("IMDTRACK_DATA_DIR")
+    local = _repo.env("DATA_DIR")
     if local:
         return _read_published_dir(Path(local) / PUBLISHED_DIR)
     cache = Path(cache_dir) if cache_dir else _fetch.default_cache_dir()
@@ -348,7 +348,7 @@ def build_ibtracs(
 ) -> tuple:
     """Fetch the NCEI North Indian Ocean CSV and publish it into ``data_dir/ibtracs/``.
 
-    Mirrors :func:`imdtrack.build`: a content hash is compared with the published
+    Mirrors :func:`stormtrack.build`: a content hash is compared with the published
     manifest, unchanged sources are skipped, and the new data is validated before
     the parquet files are (atomically) replaced. Returns ``(changed, manifest)``.
     """

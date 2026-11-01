@@ -30,7 +30,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import imdtrack as imd
+import stormtrack as st
 
 # ---- A small, consistent visual system -----------------------------------
 # Two sub-basins are an *identity* (categorical) encoding: one fixed hue each,
@@ -85,7 +85,7 @@ def storm_label(row):
 # Load and clean: drop the handful of coordinate spikes (`pos_suspect`) and fix
 # day/month-transposed dates (`date_suspect`) so the map has no impossible jumps
 # and genesis months are correct (e.g. Nargis returns to May instead of January).
-bt = imd.load().clean(fix_dates=True)
+bt = st.load().clean(fix_dates=True)
 obs = bt.observations.copy()
 storms = bt.storms.copy()
 bt
@@ -346,7 +346,7 @@ plt.show()
 # and the counts labelled directly.
 
 # %%
-from imdtrack import GRADE_LONG, GRADE_ORDER  # noqa: E402
+from stormtrack import GRADE_LONG, GRADE_ORDER  # noqa: E402
 
 grade_counts = storms["peak_grade"].value_counts().reindex(GRADE_ORDER, fill_value=0)
 # Ordinal shading: weaker grades lighter, stronger darker (implies intensity).

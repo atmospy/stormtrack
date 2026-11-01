@@ -42,7 +42,7 @@ MSLP_RANGE = (800.0, 1040.0)  # hPa
 # (TD, TS, TY, ST, TC, HU, SD, SS); the rest are disturbances, lows, waves, ...
 TC_TYPES = {"TD", "TS", "TY", "ST", "TC", "HU", "SD", "SS"}
 
-# ATCF basin code -> the IBTrACS genesis-basin code used elsewhere in imdtrack.
+# ATCF basin code -> the IBTrACS genesis-basin code used elsewhere in stormtrack.
 BASIN_TO_IBTRACS = {"AL": "NA", "EP": "EP", "CP": "EP", "WP": "WP", "IO": "NI", "SH": "SH"}
 
 _QUADS = ("ne", "se", "sw", "nw")
@@ -147,7 +147,7 @@ def _empty() -> pd.DataFrame:
 
 
 def best_track_frame(deck: pd.DataFrame) -> pd.DataFrame:
-    """Reshape a parsed b-deck into the ``observations`` schema used by imdtrack.
+    """Reshape a parsed b-deck into the ``observations`` schema used by stormtrack.
 
     Keeps ``tech == "BEST"`` rows, drops duplicate times (the last entry wins, as
     asynoptic records are appended), and adds ``storm_id`` (the ATCF id), ``basin``

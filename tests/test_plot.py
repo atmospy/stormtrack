@@ -10,8 +10,8 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from imdtrack import _schema as S  # noqa: E402
-from imdtrack.plot import plot_track, plot_tracks  # noqa: E402
+from stormtrack import _schema as S  # noqa: E402
+from stormtrack.plot import plot_track, plot_tracks  # noqa: E402
 
 
 def _track():

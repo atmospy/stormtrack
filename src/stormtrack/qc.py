@@ -160,7 +160,7 @@ def flag_dates(observations: pd.DataFrame, min_gap_days: int = MAX_STORM_SPREAD_
 
     Returns ``(date_suspect, corrected_time)``: a boolean Series and a copy of
     ``time`` with the swap applied for flagged fixes (source untouched — callers
-    opt in via :meth:`imdtrack.BestTracks.clean`).
+    opt in via :meth:`stormtrack.BestTracks.clean`).
     """
     suspect = pd.Series(False, index=observations.index)
     corrected = (

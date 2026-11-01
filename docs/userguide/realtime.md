@@ -1,16 +1,16 @@
 # Real-time storms, forecasts & verification
 
-`imdtrack.realtime` reads **ATCF** text decks (Sampson & Schrader 2000), the format NHC
+`stormtrack.realtime` reads **ATCF** text decks (Sampson & Schrader 2000), the format NHC
 and JTWC publish. Everything it returns uses the same columns as the archived
-datasets, so [`imdtrack.analysis`](ibtracs.md) and the plots work on live storms too.
+datasets, so [`stormtrack.analysis`](ibtracs.md) and the plots work on live storms too.
 
 ```python
-import imdtrack as imd
+import stormtrack as st
 
-now = imd.realtime.active_storms("jtwc", basins=["io"])    # JTWC North Indian Ocean
+now = st.realtime.active_storms("jtwc", basins=["io"])    # JTWC North Indian Ocean
 now.storms
-fc = imd.realtime.get_forecast("AL042026")                  # NHC official forecast (OFCL)
-gd = imd.realtime.get_guidance("AL042026")                  # every model, every cycle (a-deck)
+fc = st.realtime.get_forecast("AL042026")                  # NHC official forecast (OFCL)
+gd = st.realtime.get_guidance("AL042026")                  # every model, every cycle (a-deck)
 ```
 
 ## Which agencies?
@@ -19,7 +19,7 @@ gd = imd.realtime.get_guidance("AL042026")                  # every model, every
 |---|---|---|
 | NHC / CPHC | `active_storms("nhc")` | `get_forecast(id)`, `get_guidance(id)` |
 | JTWC | `active_storms("jtwc")` (open UCAR RAL mirror) | `get_forecast(id, source="jtwc")` — **mirrors may block automated access**; pass `url=` |
-| IMD, JMA, BoM, Météo-France | archived only (`imd.load`, `imd.load_ibtracs`) | **no machine-readable feed found** |
+| IMD, JMA, BoM, Météo-France | archived only (`st.load`, `st.load_ibtracs`) | **no machine-readable feed found** |
 
 IMD publishes its cyclone bulletins as text/PDF, not as a documented data feed, so
 IMD's *forecasts* cannot be read programmatically; if that changes, parsing them into
@@ -33,7 +33,7 @@ Score any forecast against any best track — including NHC or JTWC forecasts of
 Indian Ocean storm against the IMD record:
 
 ```python
-from imdtrack import verification as V
+from stormtrack import verification as V
 
 errors = V.forecast_errors(gd, best_track)        # track, along/cross-track, wind, pressure
 V.error_summary(errors)                           # by technique and lead time
@@ -54,7 +54,7 @@ reproduces that definition from *your* errors, and `cone_polygons` / `plot_forec
 draw it:
 
 ```python
-imd.plot_forecast(fc, best=track_so_far, radii_km=radii)
+st.plot_forecast(fc, best=track_so_far, radii_km=radii)
 ```
 
 `plot_forecast` colours the forecast (and best-track) points by intensity category and

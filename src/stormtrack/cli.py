@@ -1,4 +1,4 @@
-"""Command-line interface: ``imdtrack update`` / ``info`` / ``export`` / ``build``."""
+"""Command-line interface: ``stormtrack update`` / ``info`` / ``export`` / ``build``."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from .core import load
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="imdtrack", description=__doc__)
+    p = argparse.ArgumentParser(prog="stormtrack", description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
 
     p_up = sub.add_parser("update", help="Refresh the published dataset from GitHub (if changed).")

@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import imdtrack as imd
-from imdtrack import analysis as A
-from imdtrack import realtime as R
-from imdtrack import verification as V
-from imdtrack.atcf import best_track_frame, parse_atcf
+import stormtrack as st
+from stormtrack import analysis as A
+from stormtrack import realtime as R
+from stormtrack import verification as V
+from stormtrack.atcf import best_track_frame, parse_atcf
 
 # Layout copied from real NHC files: 28+ comma-separated fields, wind radii on repeated lines.
 FST = """\
@@ -220,14 +220,14 @@ def test_plot_forecast_smoke():
     import matplotlib.pyplot as plt
 
     fc = parse_atcf(FST)
-    ax = imd.plot_forecast(fc, best=_track(14.0, -45.0, dlon=-0.1), radii_km={12: 50, 48: 200})
+    ax = st.plot_forecast(fc, best=_track(14.0, -45.0, dlon=-0.1), radii_km={12: 50, 48: 200})
     assert ax is not None
     plt.close("all")
 
 
 def test_plot_category_scales():
     pytest.importorskip("cartopy")
-    from imdtrack.plot import _category
+    from stormtrack.plot import _category
 
     ss = [c for c, _ in _category([20, 34, 63, 64, 83, 96, 113, 137, np.nan], "saffir-simpson")]
     assert ss == ["TD", "TS", "TS", "C1", "C2", "C3", "C4", "C5", None]
@@ -240,7 +240,7 @@ def test_plot_category_scales():
 
     fc = parse_atcf(FST)
     for scale in ("saffir-simpson", "imd"):
-        labels = [t.get_text() for t in imd.plot_forecast(fc, scale=scale).texts]
+        labels = [t.get_text() for t in st.plot_forecast(fc, scale=scale).texts]
         assert any("kt" in t for t in labels)
     plt.close("all")
 
@@ -259,12 +259,12 @@ def test_plot_forecast_dateline_and_edge_cases():
             for t, la, lo, w in [(0, 100, 1780, 40), (24, 115, 1795, 60), (48, 130, 1810, 80)]
         )
     )
-    ax = imd.plot_forecast(dl, radii_km={24: 50, 48: 90})
+    ax = st.plot_forecast(dl, radii_km={24: 50, 48: 90})
     x0, x1, _, _ = ax.get_extent(ax.projection)
     assert x1 - x0 < 40  # a regional map, not the whole globe
     assert ax.projection.proj4_params["lon_0"] == 180  # centred on the dateline
     # no wind anywhere, and a single point, must still draw
     nowind = dl.assign(vmax=np.nan)
-    assert imd.plot_forecast(nowind) is not None
-    assert imd.plot_forecast(dl.iloc[:1]) is not None
+    assert st.plot_forecast(nowind) is not None
+    assert st.plot_forecast(dl.iloc[:1]) is not None
     plt.close("all")

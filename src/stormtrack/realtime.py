@@ -4,14 +4,14 @@ Only agencies that publish machine-readable ATCF are supported. As of this
 writing neither IMD nor JMA, BoM or Météo-France offers a track-forecast feed in
 that (or any other documented) format — IMD's cyclone bulletins are text/PDF — so
 their forecasts cannot be read programmatically; their *best tracks* are the
-archived products already handled by :func:`imdtrack.load` and
-:func:`imdtrack.load_ibtracs`.
+archived products already handled by :func:`stormtrack.load` and
+:func:`stormtrack.load_ibtracs`.
 
->>> import imdtrack as imd
->>> now = imd.realtime.active_storms("nhc")             # Atlantic / East + Central Pacific
->>> io = imd.realtime.active_storms("jtwc", basins=["io"])   # JTWC North Indian Ocean
->>> fc = imd.realtime.get_forecast("AL042026")          # NHC official forecast (OFCL)
->>> gd = imd.realtime.get_guidance("AL042026")          # every model, every cycle
+>>> import stormtrack as st
+>>> now = st.realtime.active_storms("nhc")             # Atlantic / East + Central Pacific
+>>> io = st.realtime.active_storms("jtwc", basins=["io"])   # JTWC North Indian Ocean
+>>> fc = st.realtime.get_forecast("AL042026")          # NHC official forecast (OFCL)
+>>> gd = st.realtime.get_guidance("AL042026")          # every model, every cycle
 
 JTWC data come from the open UCAR RAL mirror of the b-decks by default. The files
 JTWC's own forecasts are distributed in (``.fst``/``.sum``) are served from mirrors
@@ -40,7 +40,7 @@ JTWC_FST_MIRRORS = (
     "https://www.ssd.noaa.gov/PS/TROP/DATA/ATCF/JTWC/{id}.fst",
     "https://www.nrlmry.navy.mil/atcf_web/docs/current_storms/{id}.fst",
 )
-_UA = {"User-Agent": "imdtrack (https://github.com/syedhamidali/imdtrack)"}
+_UA = {"User-Agent": "stormtrack (https://github.com/atmospy/stormtrack)"}
 
 
 def _get(url: str, timeout: float = 60.0) -> bytes:
@@ -71,7 +71,7 @@ def active_storms(
     now=None,
     timeout: float = 60.0,
 ) -> BestTracks:
-    """Best tracks of currently active systems, as a :class:`~imdtrack.BestTracks`.
+    """Best tracks of currently active systems, as a :class:`~stormtrack.BestTracks`.
 
     Parameters
     ----------
@@ -130,7 +130,7 @@ def get_forecast(
     ``storm_id`` is the ATCF id, e.g. ``"AL042026"`` or ``"IO042026"``. ``tech``
     defaults to ``"OFCL"`` (NHC) or ``"JTWC"``. For ``source="jtwc"`` the known
     mirrors are tried in turn unless ``url`` (a ``.fst`` URL) is given. Returns the
-    :func:`~imdtrack.atcf.parse_atcf` frame filtered to ``tech``, one row per lead
+    :func:`~stormtrack.atcf.parse_atcf` frame filtered to ``tech``, one row per lead
     time ``tau`` (hours), with wind radii.
     """
     sid = storm_id.lower()
@@ -167,7 +167,7 @@ def get_guidance(
 
     NHC's public a-decks hold the official forecast (``OFCL``), global and regional
     models (``AVNO``, ``HWRF`` ...), consensus aids and ensembles. Use
-    :func:`imdtrack.verification.forecast_errors` to score them against a best track.
+    :func:`stormtrack.verification.forecast_errors` to score them against a best track.
     ``techs`` restricts the result; ``url`` overrides the a-deck location.
     """
     if source != "nhc" and not url:
@@ -184,7 +184,7 @@ def interpolate_forecast(fc: pd.DataFrame, step: int = 6) -> pd.DataFrame:
 
     Positions (longitude unwrapped across the dateline), ``vmax`` and ``mslp`` are
     interpolated in time; ``ty`` is carried forward from the latest forecast point.
-    Useful to compute forecast ACE (:func:`imdtrack.analysis.ace` on the result) or to
+    Useful to compute forecast ACE (:func:`stormtrack.analysis.ace` on the result) or to
     compare with 6-hourly best tracks. The 6-hourly choice follows tropycal.
     """
     fc = fc.sort_values("tau").drop_duplicates("tau")

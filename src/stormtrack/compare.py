@@ -4,14 +4,14 @@ Storms are paired by *track*, not by name or id: two storms match when they shar
 fixes at the same times and sit close together. Fix-by-fix differences in
 position, wind and pressure are then summarised.
 
->>> import imdtrack as imd
->>> cmp = imd.compare_tracks(imd.load(), imd.load_ibtracs(basin="NI"))
+>>> import stormtrack as st
+>>> cmp = st.compare_tracks(st.load(), st.load_ibtracs(basin="NI"))
 >>> cmp.matches          # one row per paired storm
 >>> cmp.summary()        # position / wind / pressure agreement
 
 Wind speeds are not like-for-like: IMD reports 3-minute sustained wind, JTWC
 (``ib_wind="usa"``) 1-minute, and WMO (Harper et al. 2010, WMO/TD-1555) provides no
-3-min conversion — only 1-min <-> 10-min (:func:`imdtrack.analysis.convert_vmax`). So
+3-min conversion — only 1-min <-> 10-min (:func:`stormtrack.analysis.convert_vmax`). So
 no rescaling is applied by default; ``ib_wind_scale`` lets you apply your own.
 """
 
@@ -95,7 +95,7 @@ def compare_tracks(
 
     Parameters
     ----------
-    a, b : :class:`~imdtrack.BestTracks` (or observations frames). ``a`` is the
+    a, b : :class:`~stormtrack.BestTracks` (or observations frames). ``a`` is the
            reference (normally the IMD record), ``b`` the other (IBTrACS).
     max_km : a pair must have mean separation below this over their common times.
     min_common : minimum number of common fix times for a pair to be considered.

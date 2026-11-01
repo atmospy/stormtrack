@@ -11,7 +11,7 @@ Method (after NHC practice, https://www.nhc.noaa.gov/verification/verify4.shtml)
   (https://www.nhc.noaa.gov/aboutcone.shtml). :func:`error_radii` computes such
   radii from any set of errors and :func:`cone_polygons` builds the shape.
 
-The best track may come from any imdtrack source, so JTWC or NHC forecasts for a
+The best track may come from any stormtrack source, so JTWC or NHC forecasts for a
 North Indian Ocean storm can be scored against the IMD best track.
 
 Note: NHC's published 2026 experimental cone uses ellipses at the 90th percentile
@@ -85,10 +85,10 @@ def forecast_errors(
 
     Parameters
     ----------
-    forecasts : an :func:`~imdtrack.atcf.parse_atcf` frame (an f-deck from
-        :func:`~imdtrack.realtime.get_forecast`, or an a-deck from
-        :func:`~imdtrack.realtime.get_guidance`; many techs and cycles are fine).
-    best : a :class:`~imdtrack.BestTracks` or observations frame. With one storm in
+    forecasts : an :func:`~stormtrack.atcf.parse_atcf` frame (an f-deck from
+        :func:`~stormtrack.realtime.get_forecast`, or an a-deck from
+        :func:`~stormtrack.realtime.get_guidance`; many techs and cycles are fine).
+    best : a :class:`~stormtrack.BestTracks` or observations frame. With one storm in
         it, every forecast is scored against that storm (so the forecast and best
         track may have different ids, e.g. a JTWC forecast vs the IMD best track);
         with several, forecasts are matched on ``atcf_id == storm_id``.

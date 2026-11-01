@@ -1,7 +1,7 @@
-# Contributing to imdtrack
+# Contributing to stormtrack
 
 Thanks for helping! Bug reports, fixes, and features are all welcome via
-[issues](https://github.com/syedhamidali/imdtrack/issues) and pull requests.
+[issues](https://github.com/atmospy/stormtrack/issues) and pull requests.
 
 ## Development setup ([uv](https://docs.astral.sh/uv/))
 

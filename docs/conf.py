@@ -1,4 +1,4 @@
-"""Sphinx configuration for the imdtrack documentation.
+"""Sphinx configuration for the stormtrack documentation.
 
 Docs are built with the PyData Sphinx Theme and MyST-NB, which executes the
 example notebooks (authored as jupytext ``py:percent`` scripts) at build time.
@@ -10,20 +10,20 @@ from __future__ import annotations
 import os
 import pathlib
 
-import imdtrack
+import stormtrack
 
 # Execute the example notebooks against the dataset committed in the repo, with
 # no network access.  Setting the env var here (before MyST-NB launches a
-# kernel, which inherits this process's environment) makes ``imd.load()`` inside
+# kernel, which inherits this process's environment) makes ``st.load()`` inside
 # the examples read ../data/ directly.
 _DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
-os.environ.setdefault("IMDTRACK_DATA_DIR", str(_DATA_DIR))
+os.environ.setdefault("STORMTRACK_DATA_DIR", str(_DATA_DIR))
 
 # -- Project information ----------------------------------------------------- #
-project = "imdtrack"
+project = "stormtrack"
 author = "Hamid Ali Syed"
 copyright = "2026, Hamid Ali Syed"
-release = imdtrack.__version__
+release = stormtrack.__version__
 version = release
 
 # -- General configuration --------------------------------------------------- #
@@ -72,13 +72,13 @@ intersphinx_mapping = {
 
 # -- HTML output (PyData theme) ---------------------------------------------- #
 html_theme = "pydata_sphinx_theme"
-html_title = "imdtrack"
+html_title = "stormtrack"
 html_theme_options = {
-    "github_url": "https://github.com/syedhamidali/imdtrack",
+    "github_url": "https://github.com/atmospy/stormtrack",
     "icon_links": [
         {
             "name": "PyPI",
-            "url": "https://pypi.org/project/imdtrack/",
+            "url": "https://pypi.org/project/stormtrack/",
             "icon": "fa-brands fa-python",
         },
     ],
@@ -89,7 +89,7 @@ html_theme_options = {
 }
 html_context = {
     "github_user": "syedhamidali",
-    "github_repo": "imdtrack",
+    "github_repo": "stormtrack",
     "github_version": "main",
     "doc_path": "docs",
 }

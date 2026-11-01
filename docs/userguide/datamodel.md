@@ -1,6 +1,6 @@
 # The data model
 
-A parsed record is a {class}`~imdtrack.BestTracks` bundle of three frames:
+A parsed record is a {class}`~stormtrack.BestTracks` bundle of three frames:
 `observations` (one row per fix), `storms` (one row per storm), and `remarks`
 (free-text notes).
 
