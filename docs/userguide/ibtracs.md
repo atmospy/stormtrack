@@ -24,6 +24,10 @@ Beyond the shared columns (`storm_id, year, basin, name, time, lat, lon, wind,
 pressure, grade, step`) IBTrACS frames carry `wmo_wind`, `usa_wind`, `wind_agency`,
 `sshs`, `dist2land`, `storm_speed`, `nature`, `track_type` and `imd_*` (IMD's own
 submission to IBTrACS). `wind` is the WMO-agency wind filled with the JTWC wind.
+`usa_lat`/`usa_lon` are the JTWC/NHC analysis position, kept apart from the default
+`lat`/`lon` so the two can be compared. `basin` is a storm's genesis basin, constant over
+its life; `obs_basin` is the basin IBTrACS tags each observation with, which separates the
+part of a track that lies in a given basin.
 
 ```{warning}
 Agencies average wind over different periods (IMD 3-min, NHC/JTWC 1-min, JMA

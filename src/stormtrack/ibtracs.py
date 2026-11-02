@@ -43,7 +43,8 @@ BASINS = ("NI", "WP", "EP", "NA", "SA", "SP", "SI")  # IBTrACS genesis-basin cod
 _USECOLS = [
     "SID", "SEASON", "NUMBER", "BASIN", "SUBBASIN", "NAME", "ISO_TIME", "NATURE", "LAT",
     "LON", "WMO_WIND", "WMO_PRES", "WMO_AGENCY", "TRACK_TYPE", "DIST2LAND", "LANDFALL",
-    "USA_WIND", "USA_PRES", "USA_SSHS", "USA_RMW", "USA_ROCI", "STORM_SPEED",
+    "USA_LAT", "USA_LON", "USA_WIND", "USA_PRES", "USA_SSHS", "USA_RMW", "USA_ROCI",
+    "STORM_SPEED",
     "NEWDELHI_GRADE", "NEWDELHI_WIND", "NEWDELHI_PRES", "NEWDELHI_LAT", "NEWDELHI_LON",
 ]  # fmt: skip
 
@@ -216,11 +217,19 @@ def _tidy(df: pd.DataFrame) -> pd.DataFrame:
     out["lon"] = (out["lon"] + 180) % 360 - 180  # one convention across the dateline
     # a storm keeps its genesis basin for its whole life
     out["basin"] = df["basin"].groupby(df["sid"]).transform("first").astype(str)
+    # ...while ``obs_basin`` is the basin IBTrACS tags each observation with, so the part of a track
+    # in a given basin (e.g. a western Pacific storm's North Indian tail) can still be told apart
+    out["obs_basin"] = df["basin"].astype(str)
     out["subbasin"] = df.get("subbasin")
     name = df["name"].astype("string").str.strip().str.upper()
     out["name"] = name.where(~name.isin(["UNNAMED", "NOT_NAMED", ""]), None)
     out["nature"] = df.get("nature")
     out["track_type"] = df.get("track_type")
+
+    # the JTWC/NHC (``usa_``) analysis position, kept apart from the default ``lat``/``lon`` so
+    # the two can be compared; longitudes use the same dateline convention as ``lon``
+    out["usa_lat"] = pd.to_numeric(df.get("usa_lat"), errors="coerce")
+    out["usa_lon"] = (pd.to_numeric(df.get("usa_lon"), errors="coerce") + 180) % 360 - 180
 
     for src, dst in (
         ("wmo_wind", "wmo_wind"),

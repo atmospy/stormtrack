@@ -12,7 +12,7 @@ COLS = [
     "SID", "SEASON", "NUMBER", "BASIN", "SUBBASIN", "NAME", "ISO_TIME", "NATURE", "LAT", "LON",
     "WMO_WIND", "WMO_PRES", "WMO_AGENCY", "TRACK_TYPE", "DIST2LAND", "LANDFALL", "USA_WIND",
     "USA_PRES", "USA_SSHS", "STORM_SPEED", "NEWDELHI_GRADE", "NEWDELHI_WIND", "NEWDELHI_PRES",
-    "NEWDELHI_LAT", "NEWDELHI_LON",
+    "NEWDELHI_LAT", "NEWDELHI_LON", "USA_LAT", "USA_LON",
 ]  # fmt: skip
 
 
@@ -25,6 +25,7 @@ def _storm(sid, name, t0, winds, lat0=10.0, lon0=87.0, basin="NI", track="main",
             sid, t.year, 1, basin, "BB", name, t.strftime("%Y-%m-%d %H:%M:%S"), "TS",
             lat0 + 0.3 * i, lon0 - 0.2 * i, w, 1000 - w, "newdelhi", track, 100, 100,
             w + usa_off, 990, 0, 8, grade, w, 1000 - w, lat0 + 0.3 * i, lon0 - 0.2 * i,
+            lat0 + 0.3 * i + 0.05, lon0 - 0.2 * i - 0.05,
         ])  # fmt: skip
     return rows
 
@@ -244,3 +245,16 @@ def test_provisional_only_storms_are_kept_but_not_duplicates(csv):
     assert "2020138N10087" not in st_.index  # spur still dropped
     everything = st.load_ibtracs(path=csv, main_only=False)
     assert {"spur-merge", "US-PROVISIONAL", "main"} <= set(everything.observations["track_type"])
+
+
+def test_usa_position_and_observation_basin(csv):
+    """JTWC's own position and the per-observation basin tag are kept next to the default ones."""
+    bt = ib.load_ibtracs(path=csv)
+    o = bt.observations
+    a = o[o.storm_id == "2020136N10087"].reset_index(drop=True)
+    assert np.allclose(a.usa_lat - a.lat, 0.05)
+    assert np.allclose(a.usa_lon - a.lon, -0.05)
+    # the genesis basin is constant per storm, the observation tag is IBTrACS' own
+    assert set(o.loc[o.storm_id == "2020136N10087", "obs_basin"]) == {"NI"}
+    wp = ib.load_ibtracs(path=csv, basin=None).observations
+    assert set(wp.loc[wp.storm_id == "2020200N12150", "obs_basin"]) == {"WP"}
